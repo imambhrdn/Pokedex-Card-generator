@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pokedex Card Generator v3</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg:#0a0a0f; --sur:#13131a; --sur2:#1c1c26; --bor:#2a2a38;
+  --acc:#6c5ce7; --acc2:#a29bfe; --txt:#eeeef4;
+  --mut:#5a5a78; --mut2:#8888aa; --ok:#00b894; --err:#e17055;
+  --font:'Poppins',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--txt);font-family:var(--font);min-height:100vh;}
+
+header{background:var(--sur);border-bottom:1px solid var(--bor);padding:14px 24px;display:flex;align-items:center;gap:12px;}
+.logo{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--acc),var(--acc2));display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.logo svg{width:18px;height:18px;fill:#fff;}
+.ht{font-size:14px;font-weight:700;}
+.hs{font-size:10px;color:var(--mut2);margin-top:1px;}
+.hpill{margin-left:auto;font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;background:rgba(108,92,231,.15);color:var(--acc2);border:1px solid rgba(108,92,231,.3);}
+
+.wrap{display:grid;grid-template-columns:300px 1fr;min-height:calc(100vh - 65px);}
+
+/* SIDEBAR */
+.side{background:var(--sur);border-right:1px solid var(--bor);padding:16px 14px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:calc(100vh - 65px);}
+.slbl{font-size:9px;font-weight:700;letter-spacing:.12em;color:var(--mut);text-transform:uppercase;margin-bottom:6px;}
+hr.div{border:none;border-top:1px solid var(--bor);}
+
+/* upload */
+.ucard{background:var(--sur2);border:1.5px dashed var(--bor);border-radius:6px;padding:14px 12px;text-align:center;cursor:pointer;transition:all .15s;}
+.ucard:hover,.ucard.drag{border-color:var(--acc);background:rgba(108,92,231,.06);}
+.ucard.done{border-style:solid;border-color:var(--ok);}
+.uico{width:32px;height:32px;border-radius:7px;background:var(--bg);border:1px solid var(--bor);display:flex;align-items:center;justify-content:center;margin:0 auto 7px;}
+.uico svg{width:15px;height:15px;stroke:var(--mut2);}
+.ucard.done .uico svg{stroke:var(--ok);}
+.ut{font-size:11px;font-weight:600;margin-bottom:2px;}
+.us{font-size:9px;color:var(--mut2);line-height:1.5;}
+
+/* col map */
+.cmap{display:flex;flex-direction:column;gap:6px;}
+.crow{display:flex;align-items:center;gap:6px;}
+.clbl{font-size:10px;color:var(--mut2);width:76px;flex-shrink:0;}
+.csel{flex:1;padding:4px 7px;background:var(--bg);border:1px solid var(--bor);border-radius:5px;color:var(--txt);font-size:10px;font-family:var(--font);cursor:pointer;}
+.csel:focus{outline:none;border-color:var(--acc);}
+
+/* src toggle */
+.stog{display:flex;gap:5px;}
+.sbtn{flex:1;padding:6px 4px;border-radius:5px;border:1px solid var(--bor);background:var(--bg);color:var(--mut2);font-size:9px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .12s;text-align:center;}
+.sbtn.active{background:rgba(108,92,231,.15);border-color:var(--acc);color:var(--acc2);}
+
+/* font panel */
+.fpanel{display:flex;flex-direction:column;gap:10px;}
+.fblock{background:var(--sur2);border:1px solid var(--bor);border-radius:6px;padding:10px 10px 8px;}
+.fblock-title{font-size:9px;font-weight:700;color:var(--acc2);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;}
+.frow{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.flbl{font-size:9px;color:var(--mut2);width:30px;flex-shrink:0;}
+.frow input[type=range]{flex:1;height:3px;accent-color:var(--acc);cursor:pointer;}
+.fval{font-size:10px;color:var(--acc2);min-width:22px;text-align:right;font-weight:600;}
+.funit{font-size:8px;color:var(--mut);}
+.fwrow{display:flex;gap:3px;margin-bottom:5px;}
+.fwbtn{flex:1;padding:3px 2px;border-radius:4px;border:1px solid var(--bor);background:var(--bg);color:var(--mut2);font-size:9px;font-family:var(--font);cursor:pointer;transition:all .12s;text-align:center;}
+.fwbtn.on{background:rgba(108,92,231,.15);border-color:var(--acc);color:var(--acc2);}
+.fcrow{display:flex;align-items:center;gap:6px;margin-bottom:3px;}
+.fcrow label{font-size:9px;color:var(--mut2);flex:1;}
+.fcrow input[type=color]{width:28px;height:20px;border:1px solid var(--bor);border-radius:3px;cursor:pointer;background:none;padding:1px;}
+
+/* stats */
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.sbox{background:var(--bg);border:1px solid var(--bor);border-radius:5px;padding:7px 9px;text-align:center;}
+.snum{font-size:17px;font-weight:700;color:var(--acc2);}
+.slb{font-size:8px;color:var(--mut);}
+
+/* quality */
+.qrow{display:flex;gap:5px;}
+.qbtn{flex:1;padding:6px 3px;border-radius:5px;border:1px solid var(--bor);background:var(--bg);color:var(--mut2);font-size:9px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .12s;text-align:center;}
+.qbtn.on{background:rgba(108,92,231,.15);border-color:var(--acc);color:var(--acc2);}
+
+/* progress */
+.progwrap{display:none;}
+.progwrap.show{display:block;}
+.progt{height:3px;background:var(--bor);border-radius:2px;overflow:hidden;margin-bottom:4px;}
+.progf{height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2));width:0%;transition:width .3s;}
+.progl{font-size:9px;color:var(--mut);}
+
+/* pdf link */
+.plwrap{display:none;}
+.plwrap.show{display:block;}
+.plbox{background:rgba(0,184,148,.08);border:1px solid rgba(0,184,148,.3);border-radius:6px;padding:10px 12px;font-size:10px;color:var(--mut2);}
+.plbox strong{display:block;color:var(--ok);margin-bottom:2px;font-size:11px;}
+.plbox a{display:inline-block;margin-top:7px;padding:6px 14px;background:var(--ok);color:#fff;border-radius:5px;text-decoration:none;font-weight:700;font-size:11px;}
+
+/* btn */
+.btn{width:100%;padding:9px 14px;border-radius:6px;border:1px solid var(--bor);background:var(--sur2);color:var(--txt);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .12s;display:flex;align-items:center;justify-content:center;gap:7px;}
+.btn:hover{background:var(--bor);}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff;}
+.btn.pri:hover{background:var(--acc2);border-color:var(--acc2);}
+.btn.pri:disabled{background:var(--sur2);border-color:var(--bor);color:var(--mut);cursor:not-allowed;}
+
+/* preview */
+.prev{padding:22px;overflow-y:auto;background:var(--bg);}
+.prevh{font-size:13px;font-weight:600;margin-bottom:4px;}
+.prevs{font-size:10px;color:var(--mut2);margin-bottom:18px;}
+.pblock{background:var(--sur);border:1px solid var(--bor);border-radius:8px;overflow:hidden;margin-bottom:18px;}
+.phdr{padding:7px 13px;border-bottom:1px solid var(--bor);background:var(--sur2);display:flex;align-items:center;gap:8px;}
+.ptag{font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--acc2);background:rgba(108,92,231,.12);padding:2px 7px;border-radius:3px;}
+.pinfo{font-size:10px;color:var(--mut);}
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px;}
+.cp{aspect-ratio:745/1041;overflow:hidden;position:relative;background:var(--sur2);}
+.cp img{width:100%;height:100%;display:block;object-fit:contain;image-rendering:crisp-edges;image-rendering:-webkit-optimize-contrast;}
+.cov{position:absolute;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s;}
+.cp:hover .cov{opacity:1;}
+.cov button{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.cov button:hover{background:rgba(225,112,85,.6);}
+
+/* image cache */
+#imgCache{display:none;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 14c-2.67 0-5.03-1.37-6.42-3.44.03-2.13 4.28-3.3 6.42-3.3s6.39 1.17 6.42 3.3C17.03 18.63 14.67 20 12 20z"/></svg></div>
+  <div><div class="ht">Pokedex Card Generator</div><div class="hs">Excel + Gambar → PDF A4 · 9 kartu/hal · 63×88mm</div></div>
+  <div class="hpill">v3</div>
+</header>
+
+<div class="wrap">
+<div class="side">
+
+  <!-- 1. BG -->
+  <div>
+    <div class="slbl">1. Background Frame</div>
+    <div class="ucard" id="bgUp" onclick="document.getElementById('bgIn').click()">
+      <input type="file" id="bgIn" accept="image/*" style="display:none">
+      <div class="uico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+      <div class="ut">Upload background</div>
+      <div class="us">PNG frame kartu kosong</div>
+    </div>
+  </div>
+
+  <hr class="div">
+
+  <!-- 2. EXCEL -->
+  <div>
+    <div class="slbl">2. Data Excel / CSV</div>
+    <div class="ucard" id="xlUp" onclick="document.getElementById('xlIn').click()">
+      <input type="file" id="xlIn" accept=".xlsx,.xls,.csv" style="display:none">
+      <div class="uico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+      <div class="ut">Upload Excel / CSV</div>
+      <div class="us">id, nama, subtitle, kanan bawah, url gambar</div>
+    </div>
+    <div id="colMap" style="display:none;margin-top:10px;">
+      <div class="slbl">Mapping Kolom</div>
+      <div class="cmap">
+        <div class="crow"><span class="clbl">ID</span><select class="csel" id="mId"></select></div>
+        <div class="crow"><span class="clbl">Nama</span><select class="csel" id="mName"></select></div>
+        <div class="crow"><span class="clbl">Subtitle</span><select class="csel" id="mSub"></select></div>
+        <div class="crow"><span class="clbl">Kanan bawah</span><select class="csel" id="mRight"></select></div>
+        <div class="crow" id="mUrlRow" style="display:none"><span class="clbl">URL Gambar</span><select class="csel" id="mUrl"></select></div>
+      </div>
+      <button class="btn" style="margin-top:7px;font-size:11px;" onclick="applyMap()">Terapkan mapping</button>
+    </div>
+  </div>
+
+  <hr class="div">
+
+  <!-- 3. GAMBAR -->
+  <div>
+    <div class="slbl">3. Sumber Gambar</div>
+    <div class="stog">
+      <button class="sbtn active" id="sUp" onclick="setSrc('upload')">Upload file<br><span style="font-weight:400;font-size:8px;">1.png, 2.png...</span></button>
+      <button class="sbtn" id="sUrl" onclick="setSrc('url')">URL dari CSV<br><span style="font-weight:400;font-size:8px;">kolom link</span></button>
+    </div>
+    <div id="secUp" style="margin-top:8px;">
+      <div class="ucard" id="imUp" onclick="document.getElementById('imIn').click()">
+        <input type="file" id="imIn" accept="image/*" multiple style="display:none">
+        <div class="uico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="9" height="9" rx="1"/><rect x="13" y="2" width="9" height="9" rx="1"/><rect x="2" y="13" width="9" height="9" rx="1"/><rect x="13" y="13" width="9" height="9" rx="1"/></svg></div>
+        <div class="ut">Upload gambar</div>
+        <div class="us">Nama file = angka ID<br>1.png, 2.png, 11.png...</div>
+      </div>
+    </div>
+    <div id="secUrl" style="display:none;margin-top:8px;padding:9px 11px;background:rgba(108,92,231,.08);border:1px solid rgba(108,92,231,.2);border-radius:6px;">
+      <p style="font-size:10px;color:var(--acc2);font-weight:600;margin-bottom:3px;">URL dari kolom CSV</p>
+      <p style="font-size:9px;color:var(--mut2);line-height:1.5;">Gambar di-fetch dari URL publik di kolom yang dipilih. Pastikan URL bisa diakses browser (tidak ada CORS block).</p>
+    </div>
+  </div>
+
+  <hr class="div">
+
+  <!-- 4. FONT CONTROLS -->
+  <div>
+    <div class="slbl">4. Teks &amp; Posisi</div>
+    <div class="fpanel">
+
+      <!-- NAMA -->
+      <div class="fblock">
+        <div class="fblock-title">Nama Pokemon</div>
+        <div class="fwrow" id="fw-name"></div>
+        <div class="frow"><span class="flbl">Size</span><input type="range" min="6" max="72" value="18" id="fs-name" oninput="fv(this,'fv-name');rd()"><span class="fval" id="fv-name">18</span><span class="funit">pt</span></div>
+        <div class="frow"><span class="flbl">X pos</span><input type="range" min="0" max="63" value="5" step=".5" id="fx-name" oninput="fv(this,'fvx-name');rd()"><span class="fval" id="fvx-name">5</span><span class="funit">mm</span></div>
+        <div class="frow"><span class="flbl">Y pos</span><input type="range" min="0" max="88" value="4" step=".5" id="fy-name" oninput="fv(this,'fvy-name');rd()"><span class="fval" id="fvy-name">4</span><span class="funit">mm</span></div>
+        <div class="fcrow"><label>Warna</label><input type="color" id="fc-name" value="#111111" oninput="rd()"></div>
+      </div>
+
+      <!-- SUBTITLE -->
+      <div class="fblock">
+        <div class="fblock-title">Subtitle</div>
+        <div class="fwrow" id="fw-sub"></div>
+        <div class="frow"><span class="flbl">Size</span><input type="range" min="4" max="48" value="11" id="fs-sub" oninput="fv(this,'fv-sub');rd()"><span class="fval" id="fv-sub">11</span><span class="funit">pt</span></div>
+        <div class="frow"><span class="flbl">X pos</span><input type="range" min="0" max="63" value="5" step=".5" id="fx-sub" oninput="fv(this,'fvx-sub');rd()"><span class="fval" id="fvx-sub">5</span><span class="funit">mm</span></div>
+        <div class="frow"><span class="flbl">Y pos</span><input type="range" min="0" max="88" value="11" step=".5" id="fy-sub" oninput="fv(this,'fvy-sub');rd()"><span class="fval" id="fvy-sub">11</span><span class="funit">mm</span></div>
+        <div class="fcrow"><label>Warna</label><input type="color" id="fc-sub" value="#444444" oninput="rd()"></div>
+      </div>
+
+      <!-- GAMBAR POKEMON -->
+      <div class="fblock">
+        <div class="fblock-title">Gambar Pokemon</div>
+        <div class="frow"><span class="flbl">Lebar</span><input type="range" min="10" max="63" value="42" id="iw" oninput="fv(this,'ivw');rd()"><span class="fval" id="ivw">42</span><span class="funit">mm</span></div>
+        <div class="frow"><span class="flbl">Tinggi</span><input type="range" min="10" max="88" value="35" id="ih" oninput="fv(this,'ivh');rd()"><span class="fval" id="ivh">35</span><span class="funit">mm</span></div>
+        <div class="frow"><span class="flbl">X pos</span><input type="range" min="-10" max="63" value="11" step=".5" id="ix" oninput="fv(this,'ivx');rd()"><span class="fval" id="ivx">11</span><span class="funit">mm</span></div>
+        <div class="frow"><span class="flbl">Y pos</span><input type="range" min="0" max="88" value="24" step=".5" id="iy" oninput="fv(this,'ivy');rd()"><span class="fval" id="ivy">24</span><span class="funit">mm</span></div>
+        <button class="btn" style="margin-top:5px;font-size:10px;" onclick="centerImage()">Center Gambar</button>
+      </div>
+
+      <!-- ID -->
+      <div class="fblock">
+        <div class="fblock-title">ID (kiri bawah)</div>
+        <div class="fwrow" id="fw-id"></div>
+        <div class="frow"><span class="flbl">Size</span><input type="range" min="4" max="24" value="10" id="fs-id" oninput="fv(this,'fv-id');rd()"><span class="fval" id="fv-id">10</span><span class="funit">pt</span></div>
+        <div class="frow"><span class="flbl">X pos</span><input type="range" min="0" max="63" value="4" step=".5" id="fx-id" oninput="fv(this,'fvx-id');rd()"><span class="fval" id="fvx-id">4</span><span class="funit">mm</span></div>
+        <div class="frow"><span class="flbl">Y pos</span><input type="range" min="70" max="88" value="82" step=".5" id="fy-id" oninput="fv(this,'fvy-id');rd()"><span class="fval" id="fvy-id">82</span><span class="funit">mm</span></div>
+        <div class="fcrow"><label>Warna</label><input type="color" id="fc-id" value="#111111" oninput="rd()"></div>
+      </div>
+
+      <!-- GENERATION / KANAN BAWAH -->
+      <div class="fblock">
+        <div class="fblock-title">Kanan Bawah (Generation)</div>
+        <div class="fwrow" id="fw-gen"></div>
+        <div class="frow"><span class="flbl">Size</span><input type="range" min="4" max="24" value="10" id="fs-gen" oninput="fv(this,'fv-gen');rd()"><span class="fval" id="fv-gen">10</span><span class="funit">pt</span></div>
+        <div class="frow"><span class="flbl">X pos</span><input type="range" min="40" max="63" value="58" step=".5" id="fx-gen" oninput="fv(this,'fvx-gen');rd()"><span class="fval" id="fvx-gen">58</span><span class="funit">mm</span></div>
+        <div class="frow"><span class="flbl">Y pos</span><input type="range" min="70" max="88" value="82" step=".5" id="fy-gen" oninput="fv(this,'fvy-gen');rd()"><span class="fval" id="fvy-gen">82</span><span class="funit">mm</span></div>
+        <div class="fcrow"><label>Warna</label><input type="color" id="fc-gen" value="#111111" oninput="rd()"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <hr class="div">
+
+  <!-- STATS -->
+  <div>
+    <div class="slbl">Status</div>
+    <div class="sgrid">
+      <div class="sbox"><div class="snum" id="stCards">0</div><div class="slb">kartu</div></div>
+      <div class="sbox"><div class="snum" id="stPages">0</div><div class="slb">halaman</div></div>
+      <div class="sbox"><div class="snum" id="stOk">0</div><div class="slb">gambar OK</div></div>
+      <div class="sbox"><div class="snum" id="stMiss">0</div><div class="slb">tanpa gambar</div></div>
+    </div>
+  </div>
+
+  <!-- QUALITY -->
+  <div>
+    <div class="slbl">Kualitas PDF</div>
+    <div class="qrow">
+      <button class="qbtn" id="q-web" onclick="setQ('web')">web<br><span style="font-weight:400;font-size:8px;">150dpi</span></button>
+      <button class="qbtn on" id="q-print" onclick="setQ('print')">print<br><span style="font-weight:400;font-size:8px;">300dpi</span></button>
+      <button class="qbtn" id="q-max" onclick="setQ('max')">max<br><span style="font-weight:400;font-size:8px;">300+PNG</span></button>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progwrap" id="pw"><div class="progt"><div class="progf" id="pf"></div></div><div class="progl" id="pl">Memproses...</div></div>
+
+  <!-- PDF LINK -->
+  <div class="plwrap" id="plw"><div class="plbox"><strong id="pdfTit">PDF siap!</strong><span>Buka → Ctrl+S / Cmd+S</span><br><a id="pdfA" href="#" target="_blank">Buka PDF →</a></div></div>
+
+  <!-- GENERATE -->
+  <button class="btn pri" id="btnGen" onclick="genPDF()" disabled>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    Generate PDF
+  </button>
+
+</div><!-- /side -->
+
+<!-- PREVIEW -->
+<div class="prev">
+  <div class="prevh">Preview Kartu</div>
+  <div class="prevs">Perubahan slider langsung terlihat di preview</div>
+  <div id="prevWrap">
+    <div style="text-align:center;padding:60px 24px;color:var(--mut);">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=".8" style="opacity:.12;display:block;margin:0 auto 12px;"><rect x="3" y="3" width="18" height="18"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      <div style="font-size:12px;color:var(--mut2);font-weight:500;margin-bottom:4px;">Belum ada data</div>
+      <div style="font-size:10px;">Upload background + Excel untuk mulai</div>
+    </div>
+  </div>
+</div>
+</div><!-- /wrap -->
+
+<!-- hidden image cache for CORS workaround -->
+<div id="imgCache" style="display:none;"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+let bgImg=null, exRows=[], cards=[], imgMap={}, imgSrc='upload', qual='print';
+let fw={name:700,sub:400,id:700,gen:500};
+let dbt=null;
+const imgCache={}; // url → dataURL (pre-fetched via Image tag)
+
+// ── FONT WEIGHT BUTTONS ────────────────────────────────────────────────────
+const FW_OPTS=[{l:'400',v:400},{l:'600',v:600},{l:'700',v:700},{l:'800',v:800}];
+['name','sub','id','gen'].forEach(field=>{
+  const cont=document.getElementById('fw-'+field);
+  FW_OPTS.forEach(o=>{
+    const b=document.createElement('button');
+    b.className='fwbtn'+(fw[field]===o.v?' on':'');
+    b.textContent=o.l;
+    b.onclick=()=>{
+      fw[field]=o.v;
+      cont.querySelectorAll('.fwbtn').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');
+      rd();
+    };
+    cont.appendChild(b);
+  });
+});
+
+// ── SLIDER HELPER ──────────────────────────────────────────────────────────
+function fv(el,valId){document.getElementById(valId).textContent=el.value;}
+function gn(id){return parseFloat(document.getElementById(id).value);}
+function gv(id){return document.getElementById(id).value;}
+function rd(){clearTimeout(dbt);dbt=setTimeout(renderPreview,100);}
+
+// ── CENTER IMAGE ─────────────────────────────────────────────────────────────
+function centerImage(){
+  const imgW=gn('iw'); // dalam mm
+  const imgH=gn('ih'); // dalam mm
+  const centerX=((63-imgW)/2).toFixed(1);
+  const centerY=((88-imgH)/2).toFixed(1);
+  document.getElementById('ix').value=centerX;
+  document.getElementById('iy').value=centerY;
+  fv(document.getElementById('ix'),'ivx');
+  fv(document.getElementById('iy'),'ivy');
+  rd();
+}
+
+// ── QUALITY ────────────────────────────────────────────────────────────────
+function setQ(q){
+  qual=q;
+  document.querySelectorAll('.qbtn').forEach(b=>b.classList.remove('on'));
+  document.getElementById('q-'+q).classList.add('on');
+}
+
+// ── SRC TOGGLE ─────────────────────────────────────────────────────────────
+function setSrc(s){
+  imgSrc=s;
+  document.getElementById('sUp').classList.toggle('active',s==='upload');
+  document.getElementById('sUrl').classList.toggle('active',s==='url');
+  document.getElementById('secUp').style.display=s==='upload'?'':'none';
+  document.getElementById('secUrl').style.display=s==='url'?'':'none';
+  document.getElementById('mUrlRow').style.display=s==='url'?'':'none';
+  rebuild();
+}
+
+// ── MARK DONE ──────────────────────────────────────────────────────────────
+function markDone(id,lbl){
+  const el=document.getElementById(id);
+  el.classList.add('done');
+  el.querySelector('.ut').textContent='✓ '+lbl;
+}
+
+// ── BG UPLOAD ──────────────────────────────────────────────────────────────
+document.getElementById('bgIn').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{bgImg=img;markDone('bgUp',f.name);checkReady();renderPreview();};
+    img.src=ev.target.result;
+  };
+  r.readAsDataURL(f);
+};
+
+// ── EXCEL UPLOAD ───────────────────────────────────────────────────────────
+document.getElementById('xlIn').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    const wb=XLSX.read(ev.target.result,{type:'binary'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    exRows=XLSX.utils.sheet_to_json(ws,{defval:''});
+    if(!exRows.length) return;
+    const cols=Object.keys(exRows[0]);
+    markDone('xlUp',`${f.name} · ${exRows.length} baris`);
+    ['mId','mName','mSub','mRight','mUrl'].forEach(id=>{
+      const sel=document.getElementById(id);
+      sel.innerHTML='<option value="">— pilih —</option>';
+      cols.forEach(c=>sel.innerHTML+=`<option value="${c}">${c}</option>`);
+    });
+    const auto=kws=>cols.find(c=>kws.some(k=>c.toLowerCase().includes(k)))||'';
+    document.getElementById('mId').value    =auto(['id','no','num']);
+    document.getElementById('mName').value  =auto(['name','nama','pokemon']);
+    document.getElementById('mSub').value   =auto(['sub','evolv','desc','type','tipe']);
+    document.getElementById('mRight').value =auto(['gen','generation','right','kanan','rar']);
+    document.getElementById('mUrl').value   =auto(['url','img','image','foto','pic','link','gambar']);
+    document.getElementById('colMap').style.display='block';
+    applyMap();
+  };
+  r.readAsBinaryString(f);
+};
+
+function applyMap(){rebuild();}
+
+// ── IMAGE UPLOAD ───────────────────────────────────────────────────────────
+document.getElementById('imIn').onchange=e=>{
+  const files=[...e.target.files].filter(f=>f.type.startsWith('image/'));
+  if(!files.length) return;
+  imgMap={};
+  let done=0;
+  files.forEach(f=>{
+    const key=f.name.replace(/\.[^.]+$/,'');
+    const r=new FileReader();
+    r.onload=ev=>{
+      imgMap[key]=ev.target.result;
+      if(++done===files.length){markDone('imUp',`${files.length} gambar`);rebuild();}
+    };
+    r.readAsDataURL(f);
+  });
+};
+
+// ── REBUILD CARDS ──────────────────────────────────────────────────────────
+function rebuild(){
+  if(!exRows.length) return;
+  const mId=gv('mId'),mName=gv('mName'),mSub=gv('mSub'),mRight=gv('mRight'),mUrl=gv('mUrl');
+  cards=exRows.map(row=>{
+    const id=String(row[mId]||'').trim();
+    const numKey=String(parseInt(id)||id);
+    let src=null;
+    if(imgSrc==='url'&&mUrl) src=String(row[mUrl]||'').trim()||null;
+    else src=imgMap[id]||imgMap[numKey]||null;
+    return{id,src,name:mName?String(row[mName]||''):'',sub:mSub?String(row[mSub]||''):'',right:mRight?String(row[mRight]||''):''};
+  });
+  const ok=cards.filter(c=>c.src).length;
+  document.getElementById('stCards').textContent=cards.length;
+  document.getElementById('stPages').textContent=Math.ceil(cards.length/9);
+  document.getElementById('stOk').textContent=ok;
+  document.getElementById('stMiss').textContent=cards.length-ok;
+  checkReady();
+  // Pre-fetch URL images into cache
+  if(imgSrc==='url'){
+    cards.forEach(c=>{if(c.src&&!imgCache[c.src]) prefetchImg(c.src);});
+  }
+  renderPreview();
+}
+
+function checkReady(){
+  document.getElementById('btnGen').disabled=!(bgImg&&cards.length>0);
+}
+
+// ── IMAGE LOADING ──────────────────────────────────────────────────────────
+// For URL images: try multiple methods to load images
+function prefetchImg(url){
+  return new Promise(res=>{
+    const cached=imgCache[url];
+    if(cached){
+      // Already cached - return cache info
+      if(typeof cached==='object' && cached.type){
+        return res(cached);
+      }
+      if(typeof cached==='string'){
+        // Old format - convert to new format
+        const newVal=cached.startsWith('data:')?{type:'data', url:cached}:{type:'url', url:cached};
+        imgCache[url]=newVal;
+        return res(newVal);
+      }
+      if(cached===null) return res(null);
+    }
+
+    // Helper to try loading with specific crossOrigin setting
+    const tryLoad = (useCors) => {
+      return new Promise((resolveLoad) => {
+        const img=new Image();
+        if(useCors) img.crossOrigin='anonymous';
+
+        img.onload=()=>{
+          try{
+            const c=document.createElement('canvas');
+            c.width=img.naturalWidth;
+            c.height=img.naturalHeight;
+            c.getContext('2d').drawImage(img,0,0);
+            const dataUrl=c.toDataURL('image/png');
+            imgCache[url]={type:'data', url:dataUrl};
+            resolveLoad({type:'data', url:dataUrl});
+          }catch(e){
+            // CORS blocked - store original URL for direct img tag use
+            imgCache[url]={type:'url', url:url};
+            resolveLoad({type:'url', url:url});
+          }
+        };
+
+        img.onerror=()=>{
+          // Try without CORS if first attempt failed
+          if(useCors) {
+            resolveLoad('retry');
+          } else {
+            imgCache[url]={type:'error', url:null};
+            resolveLoad(null);
+          }
+        };
+
+        img.src=url;
+      });
+    };
+
+    // First try with CORS, then without
+    tryLoad(true).then(result => {
+      if(result === 'retry') {
+        tryLoad(false).then(r => res(r));
+      } else {
+        res(result);
+      }
+    });
+  });
+}
+
+function loadImgFromSrc(src){
+  return new Promise(res=>{
+    if(!src) return res(null);
+
+    // dataURL — load directly
+    if(src.startsWith('data:')){
+      const img=new Image();
+      img.onload=()=>res(img);
+      img.onerror=()=>res(null);
+      img.src=src;
+      return;
+    }
+
+    // URL — check cache with new structure
+    const cached=imgCache[src];
+    if(cached && typeof cached==='object' && cached.type){
+      // New cache format {type, url}
+      if(cached.type==='error'||cached.url===null) return res(null);
+      const img=new Image();
+      img.onload=()=>res(img);
+      img.onerror=()=>res(null);
+      img.src=cached.url;
+      return;
+    }
+    if(cached && typeof cached==='string'){
+      // Old cache format (string URL or dataURL)
+      if(cached===null) return res(null);
+      const img=new Image();
+      img.onload=()=>res(img);
+      img.onerror=()=>res(null);
+      img.src=cached;
+      return;
+    }
+
+    // Not cached — fetch
+    const img=new Image();
+
+    // Helper to load with crossOrigin
+    const loadWithCors = () => {
+      return new Promise(resolve => {
+        const i=new Image();
+        i.crossOrigin='anonymous';
+        i.onload=()=>{
+          try{
+            const c=document.createElement('canvas');
+            c.width=i.naturalWidth;c.height=i.naturalHeight;
+            const ctx=c.getContext('2d');
+            ctx.drawImage(i,0,0);
+            const du=c.toDataURL('image/png');
+            imgCache[src]={type:'data', url:du};
+            const img2=new Image();
+            img2.onload=()=>resolve(img2);
+            img2.onerror=()=>resolve(null);
+            img2.src=du;
+          }catch(e){
+            // Tainted - store original URL
+            imgCache[src]={type:'url', url:src};
+            resolve(i);
+          }
+        };
+        i.onerror=()=>resolve(null);
+        i.src=src;
+      });
+    };
+
+    // Helper to load without crossOrigin
+    const loadWithoutCors = () => {
+      return new Promise(resolve => {
+        const i=new Image();
+        i.onload=()=>{
+          imgCache[src]={type:'url', url:src};
+          resolve(i);
+        };
+        i.onerror=()=>{
+          imgCache[src]={type:'error', url:null};
+          resolve(null);
+        };
+        i.src=src;
+      });
+    };
+
+    // Try with CORS first, then without
+    loadWithCors().then(result => {
+      if(result) res(result);
+      else loadWithoutCors().then(r => res(r));
+    });
+  });
+}
+
+// ── RENDER ONE CARD ─────────────────────────────────────────────────────────
+async function renderCard(card,W,H){
+  const cvs=document.createElement('canvas');
+  cvs.width=W;cvs.height=H;
+  const ctx=cvs.getContext('2d');
+  ctx.imageSmoothingEnabled=true;
+  ctx.imageSmoothingQuality='high';
+
+  // Background — draw to fill exactly, no clip/radius
+  ctx.drawImage(bgImg,0,0,W,H);
+
+  // Scale factors: card is 63mm × 88mm
+  const scaleX=W/63;  // pixels per mm (width)
+  const scaleY=H/88;  // pixels per mm (height)
+
+  // Helper: pt to px (1 pt = 0.3527 mm, then scale to canvas)
+  const ptToPx = (pt) => pt * 0.3527 * scaleX;
+
+  // ── NAME
+  const fsN=ptToPx(gn('fs-name'));
+  ctx.font=`${fw.name} ${fsN}px 'Poppins',sans-serif`;
+  ctx.fillStyle=gv('fc-name');
+  ctx.textBaseline='top';
+  ctx.fillText(card.name||'', gn('fx-name')*scaleX, gn('fy-name')*scaleY);
+
+  // ── SUBTITLE
+  const fsS=ptToPx(gn('fs-sub'));
+  ctx.font=`${fw.sub} ${fsS}px 'Poppins',sans-serif`;
+  ctx.fillStyle=gv('fc-sub');
+  ctx.fillText(card.sub||'', gn('fx-sub')*scaleX, gn('fy-sub')*scaleY);
+
+  // ── POKEMON IMAGE
+  if(card.src){
+    const img=await loadImgFromSrc(card.src);
+    if(img&&img.naturalWidth>0){
+      const areaW=gn('iw')*scaleX;
+      const areaH=gn('ih')*scaleY;
+      const imgX=gn('ix')*scaleX;
+      const imgY=gn('iy')*scaleY;
+      const sc2=Math.min(areaW/img.naturalWidth, areaH/img.naturalHeight);
+      const dw=img.naturalWidth*sc2, dh=img.naturalHeight*sc2;
+      // Draw image centered in its area
+      ctx.drawImage(img, imgX+(areaW-dw)/2, imgY+(areaH-dh)/2, dw, dh);
+    }
+  }
+
+  // ── ID (kiri bawah)
+  const fsI=ptToPx(gn('fs-id'));
+  ctx.font=`${fw.id} ${fsI}px 'Poppins',sans-serif`;
+  ctx.fillStyle=gv('fc-id');
+  ctx.textBaseline='bottom';
+  ctx.textAlign='left';
+  const idStr=card.id?'#'+String(card.id).padStart(4,'0'):'';
+  ctx.fillText(idStr, gn('fx-id')*scaleX, gn('fy-id')*scaleY);
+
+  // ── GENERATION (kanan bawah)
+  const fsG=ptToPx(gn('fs-gen'));
+  ctx.font=`${fw.gen} ${fsG}px 'Poppins',sans-serif`;
+  ctx.fillStyle=gv('fc-gen');
+  ctx.textAlign='right';
+  ctx.fillText(card.right||'', gn('fx-gen')*scaleX, gn('fy-gen')*scaleY);
+  ctx.textAlign='left';
+  ctx.textBaseline='alphabetic';
+
+  return cvs;
+}
+
+// ── PREVIEW ────────────────────────────────────────────────────────────────
+async function renderPreview(){
+  if(!bgImg||!cards.length) return;
+  const wrap=document.getElementById('prevWrap');
+  wrap.innerHTML='<div style="text-align:center;padding:16px;color:var(--mut);font-size:10px;">Rendering...</div>';
+
+  const show=cards.slice(0,18);
+  const total=Math.ceil(cards.length/9);
+  const frag=document.createDocumentFragment();
+
+  for(let p=0;p<Math.ceil(show.length/9);p++){
+    const bl=document.createElement('div');bl.className='pblock';
+    const h=document.createElement('div');h.className='phdr';
+    h.innerHTML=`<span class="ptag">PAGE ${p+1}</span><span class="pinfo">Kartu ${p*9+1}–${Math.min((p+1)*9,cards.length)} dari ${cards.length}${total>2?' ('+total+' hal total)':''}</span>`;
+    bl.appendChild(h);
+    const g=document.createElement('div');g.className='pgrid';
+    for(let s=0;s<9;s++){
+      const idx=p*9+s;
+      const cp=document.createElement('div');cp.className='cp';
+      if(idx<show.length){
+        const cvs=await renderCard(show[idx],372,520);
+        const img=document.createElement('img');
+        img.src=cvs.toDataURL('image/png');
+        cp.appendChild(img);
+        const ov=document.createElement('div');ov.className='cov';
+        const rb=document.createElement('button');rb.innerHTML='✕';
+        const i2=idx;rb.onclick=()=>{cards.splice(i2,1);rebuild();};
+        ov.appendChild(rb);cp.appendChild(ov);
+      } else {
+        cp.style.cssText='display:flex;align-items:center;justify-content:center;';
+        cp.innerHTML='<span style="font-size:9px;color:var(--mut);">kosong</span>';
+      }
+      g.appendChild(cp);
+    }
+    bl.appendChild(g);frag.appendChild(bl);
+  }
+  wrap.innerHTML='';wrap.appendChild(frag);
+}
+
+// ── GENERATE PDF ────────────────────────────────────────────────────────────
+async function genPDF(){
+  if(!bgImg||!cards.length) return;
+  const dpi={web:150,print:300,max:300}[qual];
+  const jq={web:.85,print:.95,max:1.0}[qual];
+  const useJ=qual!=='max';
+  const MM=dpi/25.4;
+  const PW=Math.round(210*MM),PH=Math.round(297*MM);
+  const CW=Math.round(63*MM),CH=Math.round(88*MM);
+  const GAP=Math.round(2*MM);
+  const MX=Math.round((PW-3*CW-2*GAP)/2);
+  const MY=Math.round((PH-3*CH-2*GAP)/2);
+
+  const btn=document.getElementById('btnGen');
+  const pw=document.getElementById('pw'),pf=document.getElementById('pf'),pl=document.getElementById('pl');
+  btn.disabled=true;
+  document.getElementById('plw').classList.remove('show');
+  pw.classList.add('show');
+
+  const tp=Math.ceil(cards.length/9);
+  const pd=[];
+
+  for(let p=0;p<tp;p++){
+    pl.textContent=`Rendering hal ${p+1}/${tp} (${dpi}dpi)...`;
+    pf.style.width=Math.round(p/tp*85)+'%';
+    await new Promise(r=>setTimeout(r,10));
+
+    const cvs=document.createElement('canvas');
+    cvs.width=PW;cvs.height=PH;
+    const ctx=cvs.getContext('2d');
+    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+    ctx.fillStyle='#ffffff';ctx.fillRect(0,0,PW,PH);
+
+    for(let s=0;s<9;s++){
+      const idx=p*9+s;
+      if(idx>=cards.length) continue;
+      const col=s%3,row=Math.floor(s/3);
+      const x=MX+col*(CW+GAP),y=MY+row*(CH+GAP);
+      const cc=await renderCard(cards[idx],CW,CH);
+      ctx.drawImage(cc,x,y);
+    }
+
+    const mime=useJ?'image/jpeg':'image/png';
+    const du=useJ?cvs.toDataURL(mime,jq):cvs.toDataURL(mime);
+    const bin=atob(du.split(',')[1]);
+    const bytes=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+    pd.push({bytes,isJ:useJ,w:PW,h:PH});
+    await new Promise(r=>setTimeout(r,10));
+  }
+
+  pl.textContent='Membangun PDF...';pf.style.width='93%';
+  await new Promise(r=>setTimeout(r,20));
+
+  const pdfB=buildPDF(pd);
+  const blob=new Blob([pdfB],{type:'application/pdf'});
+  const url=URL.createObjectURL(blob);
+
+  pf.style.width='100%';pl.textContent='Selesai!';
+  await new Promise(r=>setTimeout(r,300));
+  pw.classList.remove('show');
+
+  const mb=(pdfB.length/1048576).toFixed(1);
+  document.getElementById('pdfTit').textContent=`PDF siap — ${tp} hal · ${cards.length} kartu · ${mb} MB`;
+  document.getElementById('pdfA').href=url;
+  document.getElementById('plw').classList.add('show');
+  btn.disabled=false;
+}
+
+// ── PDF BUILDER ─────────────────────────────────────────────────────────────
+function buildPDF(pages){
+  const PW=595.28,PH=841.89;
+  const enc=new TextEncoder();
+  const pts=[],off={};let pos=0;
+  function w(s){const b=enc.encode(s);pts.push(b);pos+=b.length;}
+  function wb(b){pts.push(b);pos+=b.length;}
+  w('%PDF-1.4\n%\xFF\xFF\xFF\xFF\n');
+  const n=pages.length;
+  off[1]=pos;w('1 0 obj\n<</Type/Catalog/Pages 2 0 R>>\nendobj\n');
+  const kids=Array.from({length:n},(_,i)=>`${3+i*3} 0 R`).join(' ');
+  off[2]=pos;w(`2 0 obj\n<</Type/Pages/Kids [${kids}]/Count ${n}>>\nendobj\n`);
+  for(let i=0;i<n;i++){
+    const pid=3+i*3,iid=4+i*3,cid=5+i*3;
+    const{bytes,isJ,w:cw,h:ch}=pages[i];
+    off[iid]=pos;
+    w(`${iid} 0 obj\n<</Type/XObject/Subtype/Image/Width ${cw}/Height ${ch}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter ${isJ?'/DCTDecode':'/FlateDecode'}/Length ${bytes.length}>>\nstream\n`);
+    wb(bytes);w('\nendstream\nendobj\n');
+    const cont=enc.encode(`q ${PW} 0 0 ${PH} 0 0 cm /Im${i} Do Q`);
+    off[cid]=pos;w(`${cid} 0 obj\n<</Length ${cont.length}>>\nstream\n`);wb(cont);w('\nendstream\nendobj\n');
+    off[pid]=pos;w(`${pid} 0 obj\n<</Type/Page/Parent 2 0 R/MediaBox [0 0 ${PW} ${PH}]/Contents ${cid} 0 R/Resources<</XObject<</Im${i} ${iid} 0 R>>>>>>\nendobj\n`);
+  }
+  const xp=pos,mx=2+n*3;
+  w(`xref\n0 ${mx+1}\n`);w('0000000000 65535 f \n');
+  for(let id=1;id<=mx;id++){const o=off[id];w(o!==undefined?String(o).padStart(10,'0')+' 00000 n \n':'0000000000 65535 f \n');}
+  w(`trailer\n<</Size ${mx+1}/Root 1 0 R>>\nstartxref\n${xp}\n%%EOF\n`);
+  let tot=0;for(const p of pts)tot+=p.length;
+  const out=new Uint8Array(tot);let o=0;
+  for(const p of pts){out.set(p,o);o+=p.length;}
+  return out;
+}
+</script>
+</body>
+</html>
