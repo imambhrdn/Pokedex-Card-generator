@@ -126,7 +126,7 @@ hr.div{border:none;border-top:1px solid var(--bor);}
 
 <header>
   <div class="logo"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 14c-2.67 0-5.03-1.37-6.42-3.44.03-2.13 4.28-3.3 6.42-3.3s6.39 1.17 6.42 3.3C17.03 18.63 14.67 20 12 20z"/></svg></div>
-  <div><div class="ht">Pokedex Card Generator</div><div class="hs">Excel + Gambar → PDF A4 & JPEGs</div></div>
+  <div><div class="ht">Pokedex Card Generator</div><div class="hs">Excel + Gambar → PDF A4 & PNGs</div></div>
   <div class="hpill">v4</div>
 </header>
 
@@ -274,7 +274,7 @@ hr.div{border:none;border-top:1px solid var(--bor);}
     </button>
     <button class="btn" id="btnZip" onclick="genZIP()" disabled style="flex:1; background:var(--ok); color:#fff; border-color:var(--ok);">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      ZIP JPEGs
+      ZIP PNGs
     </button>
   </div>
 
@@ -451,7 +451,6 @@ function checkReady(){
 }
 
 // ── IMAGE LOADING ──────────────────────────────────────────────────────────
-// For URL images: try multiple methods to load images
 function prefetchImg(url){
   return new Promise(res=>{
     const cached=imgCache[url];
@@ -565,6 +564,8 @@ async function renderCard(card,W,H){
   ctx.imageSmoothingEnabled=true;
   ctx.imageSmoothingQuality='high';
 
+  // Jika background memiliki transparansi, kita perlu bersihkan canvas
+  ctx.clearRect(0,0,W,H);
   ctx.drawImage(bgImg,0,0,W,H);
 
   const scaleX=W/63; 
@@ -646,9 +647,9 @@ async function renderPreview(){
         
         const ov=document.createElement('div');ov.className='cov';
         
-        // --- BUTTON: DOWNLOAD JPEG INDIVIDUAL ---
+        // --- BUTTON: DOWNLOAD PNG INDIVIDUAL ---
         const btnDl=document.createElement('button');
-        btnDl.title="Download JPEG";
+        btnDl.title="Download PNG";
         btnDl.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
         btnDl.onclick=async ()=>{
           // Render High-res untuk download
@@ -656,9 +657,10 @@ async function renderPreview(){
           const CW=Math.round(63*MM); const CH=Math.round(88*MM);
           const dlCvs = await renderCard(show[idx], CW, CH);
           const a = document.createElement('a');
-          a.href = dlCvs.toDataURL('image/jpeg', 1.0);
+          // --- DIUBAH KE PNG ---
+          a.href = dlCvs.toDataURL('image/png');
           const safeName = (show[idx].name || show[idx].id || 'kartu').replace(/[^a-z0-9]/gi, '_');
-          a.download = safeName + '.jpg';
+          a.download = safeName + '.png';
           a.click();
         };
         
@@ -687,8 +689,6 @@ async function renderPreview(){
 async function genPDF(){
   if(!bgImg||!cards.length) return;
   const dpi={web:150,print:300,max:300}[qual];
-  const jq={web:.85,print:.95,max:1.0}[qual];
-  const useJ=qual!=='max';
   const MM=dpi/25.4;
   const PW=Math.round(210*MM),PH=Math.round(297*MM);
   const CW=Math.round(63*MM),CH=Math.round(88*MM);
@@ -714,6 +714,7 @@ async function genPDF(){
     cvs.width=PW;cvs.height=PH;
     const ctx=cvs.getContext('2d');
     ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+    // Background putih untuk kertas PDF
     ctx.fillStyle='#ffffff';ctx.fillRect(0,0,PW,PH);
 
     for(let s=0;s<9;s++){
@@ -725,12 +726,13 @@ async function genPDF(){
       ctx.drawImage(cc,x,y);
     }
 
-    const mime=useJ?'image/jpeg':'image/png';
-    const du=useJ?cvs.toDataURL(mime,jq):cvs.toDataURL(mime);
+    // Untuk PDF, kita tetap gunakan FlateDecode (PNG style) agar teks tajam
+    // canvas.toDataURL('image/png') adalah default jika mime tidak ditentukan
+    const du=cvs.toDataURL('image/png');
     const bin=atob(du.split(',')[1]);
     const bytes=new Uint8Array(bin.length);
     for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
-    pd.push({bytes,isJ:useJ,w:PW,h:PH});
+    pd.push({bytes,isJ:false,w:PW,h:PH});
     await new Promise(r=>setTimeout(r,10));
   }
 
@@ -757,7 +759,7 @@ async function genPDF(){
   btn.disabled=false; document.getElementById('btnZip').disabled=false;
 }
 
-// ── GENERATE ZIP JPEGS ──────────────────────────────────────────────────────
+// ── GENERATE ZIP PNGS ──────────────────────────────────────────────────────
 async function genZIP(){
   if(!bgImg||!cards.length) return;
   const btn=document.getElementById('btnZip');
@@ -767,21 +769,22 @@ async function genZIP(){
   pw.classList.add('show');
 
   const zip = new JSZip();
-  // Gunakan resolusi Print (300dpi) untuk hasil JPEG
-  const dpi = {web:150,print:300,max:300}[qual];
+  // Gunakan resolusi Print (300dpi) untuk hasil PNG
+  const dpi = 300;
   const MM = dpi/25.4;
   const CW = Math.round(63*MM);
   const CH = Math.round(88*MM);
 
   for(let i=0; i<cards.length; i++){
-    pl.textContent=`Memproses JPEG ${i+1}/${cards.length}...`;
+    pl.textContent=`Memproses PNG ${i+1}/${cards.length}...`;
     pf.style.width=Math.round((i/cards.length)*90)+'%';
     await new Promise(r=>setTimeout(r,10));
 
     const cvs = await renderCard(cards[i], CW, CH);
-    const data = cvs.toDataURL('image/jpeg', 0.95).split(',')[1];
+    // --- DIUBAH KE PNG ---
+    const data = cvs.toDataURL('image/png').split(',')[1];
     const safeName = (cards[i].id || i+1) + "_" + (cards[i].name || "kartu").replace(/[^a-z0-9]/gi, '_');
-    zip.file(safeName + ".jpg", data, {base64: true});
+    zip.file(safeName + ".png", data, {base64: true});
   }
 
   pl.textContent='Membangun file ZIP...';
@@ -800,14 +803,14 @@ async function genZIP(){
   
   const linkPdf=document.getElementById('pdfA');
   linkPdf.href=url;
-  linkPdf.download="Pokedex_Cards_JPEG.zip";
+  linkPdf.download="Pokedex_Cards_PNG.zip";
   linkPdf.textContent="Download ZIP →";
   
   document.getElementById('plw').classList.add('show');
   btn.disabled=false; document.getElementById('btnGen').disabled=false;
 }
 
-// ── PDF BUILDER ─────────────────────────────────────────────────────────────
+// ── PDF BUILDER (Internal Simple PDF Generator) ─────────────────────────────
 function buildPDF(pages){
   const PW=595.28,PH=841.89;
   const enc=new TextEncoder();
@@ -823,7 +826,8 @@ function buildPDF(pages){
     const pid=3+i*3,iid=4+i*3,cid=5+i*3;
     const{bytes,isJ,w:cw,h:ch}=pages[i];
     off[iid]=pos;
-    w(`${iid} 0 obj\n<</Type/XObject/Subtype/Image/Width ${cw}/Height ${ch}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter ${isJ?'/DCTDecode':'/FlateDecode'}/Length ${bytes.length}>>\nstream\n`);
+    // Filter selalu /FlateDecode karena kita menggunakan PNG data
+    w(`${iid} 0 obj\n<</Type/XObject/Subtype/Image/Width ${cw}/Height ${ch}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter /FlateDecode/Length ${bytes.length}>>\nstream\n`);
     wb(bytes);w('\nendstream\nendobj\n');
     const cont=enc.encode(`q ${PW} 0 0 ${PH} 0 0 cm /Im${i} Do Q`);
     off[cid]=pos;w(`${cid} 0 obj\n<</Length ${cont.length}>>\nstream\n`);wb(cont);w('\nendstream\nendobj\n');
