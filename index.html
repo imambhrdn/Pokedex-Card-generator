@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pokedex Card Generator v5.1 (Smart Type Alignment)</title>
+<title>Pokedex Card Generator v5.2 (Text Alignment)</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -131,7 +131,7 @@ hr.div{border:none;border-top:1px solid var(--bor);}
 <header>
   <div class="logo"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 14c-2.67 0-5.03-1.37-6.42-3.44.03-2.13 4.28-3.3 6.42-3.3s6.39 1.17 6.42 3.3C17.03 18.63 14.67 20 12 20z"/></svg></div>
   <div><div class="ht">Pokedex Card Generator</div><div class="hs">Excel + Gambar → PDF A4 & PNGs</div></div>
-  <div class="hpill">v5.1</div>
+  <div class="hpill">v5.2</div>
 </header>
 
 <div class="wrap">
@@ -212,9 +212,13 @@ hr.div{border:none;border-top:1px solid var(--bor);}
     <div class="slbl">5. Teks &amp; Posisi</div>
     <div class="fpanel">
 
+      <!-- NAMA POKEMON -->
       <div class="fblock">
         <div class="fblock-title">Nama Pokemon</div>
-        <div class="fwrow" id="fw-name"></div>
+        <div style="display:flex; gap:8px; margin-bottom:6px;">
+          <div id="fw-name" style="display:flex; gap:3px; flex:1;"></div>
+          <div id="ta-name" style="display:flex; gap:3px; flex:1;"></div>
+        </div>
         <div class="frow">
           <span class="flbl">Size</span>
           <input type="range" min="6" max="72" value="18" id="fs-name" oninput="sync(this,'n-fs-name');rd()">
@@ -236,9 +240,13 @@ hr.div{border:none;border-top:1px solid var(--bor);}
         <div class="fcrow"><label>Warna</label><input type="color" id="fc-name" value="#111111" oninput="rd()"></div>
       </div>
 
+      <!-- SUBTITLE -->
       <div class="fblock">
         <div class="fblock-title">Subtitle</div>
-        <div class="fwrow" id="fw-sub"></div>
+        <div style="display:flex; gap:8px; margin-bottom:6px;">
+          <div id="fw-sub" style="display:flex; gap:3px; flex:1;"></div>
+          <div id="ta-sub" style="display:flex; gap:3px; flex:1;"></div>
+        </div>
         <div class="frow">
           <span class="flbl">Size</span>
           <input type="range" min="4" max="48" value="11" id="fs-sub" oninput="sync(this,'n-fs-sub');rd()">
@@ -260,6 +268,7 @@ hr.div{border:none;border-top:1px solid var(--bor);}
         <div class="fcrow"><label>Warna</label><input type="color" id="fc-sub" value="#444444" oninput="rd()"></div>
       </div>
 
+      <!-- IKON TYPE POKEMON -->
       <div class="fblock">
         <div class="fblock-title">Ikon Type Pokemon</div>
         <div class="frow">
@@ -288,6 +297,7 @@ hr.div{border:none;border-top:1px solid var(--bor);}
         </div>
       </div>
 
+      <!-- GAMBAR POKEMON -->
       <div class="fblock">
         <div class="fblock-title">Gambar Pokemon</div>
         <div class="frow">
@@ -317,9 +327,13 @@ hr.div{border:none;border-top:1px solid var(--bor);}
         <button class="btn" style="margin-top:5px;font-size:10px;" onclick="centerImage()">Center Gambar</button>
       </div>
 
+      <!-- ID -->
       <div class="fblock">
         <div class="fblock-title">ID (kiri bawah)</div>
-        <div class="fwrow" id="fw-id"></div>
+        <div style="display:flex; gap:8px; margin-bottom:6px;">
+          <div id="fw-id" style="display:flex; gap:3px; flex:1;"></div>
+          <div id="ta-id" style="display:flex; gap:3px; flex:1;"></div>
+        </div>
         <div class="frow">
           <span class="flbl">Size</span>
           <input type="range" min="4" max="24" value="10" id="fs-id" oninput="sync(this,'n-fs-id');rd()">
@@ -341,9 +355,13 @@ hr.div{border:none;border-top:1px solid var(--bor);}
         <div class="fcrow"><label>Warna</label><input type="color" id="fc-id" value="#111111" oninput="rd()"></div>
       </div>
 
+      <!-- KANAN BAWAH -->
       <div class="fblock">
         <div class="fblock-title">Kanan Bawah (Generation)</div>
-        <div class="fwrow" id="fw-gen"></div>
+        <div style="display:flex; gap:8px; margin-bottom:6px;">
+          <div id="fw-gen" style="display:flex; gap:3px; flex:1;"></div>
+          <div id="ta-gen" style="display:flex; gap:3px; flex:1;"></div>
+        </div>
         <div class="frow">
           <span class="flbl">Size</span>
           <input type="range" min="4" max="24" value="10" id="fs-gen" oninput="sync(this,'n-fs-gen');rd()">
@@ -406,7 +424,7 @@ hr.div{border:none;border-top:1px solid var(--bor);}
 
 </div><div class="prev">
   <div class="prevh">Preview Kartu</div>
-  <div class="prevs">Anda bisa menggeser slider atau <b>mengetik langsung angka</b> di kolom koordinat.</div>
+  <div class="prevs">Anda bisa menggeser slider, mengetik angka, dan menggunakan <b>tombol perataan (Align)</b> untuk teks.</div>
   <div id="prevWrap">
     <div style="text-align:center;padding:60px 24px;color:var(--mut);">
       <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=".8" style="opacity:.12;display:block;margin:0 auto 12px;"><rect x="3" y="3" width="18" height="18"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -421,25 +439,63 @@ hr.div{border:none;border-top:1px solid var(--bor);}
 // ── STATE ──────────────────────────────────────────────────────────────────
 let bgImg=null, exRows=[], cards=[], imgMap={}, typeImgMap={}, imgSrc='upload', qual='print';
 let fw={name:700,sub:400,id:700,gen:500};
+let align={name:'left',sub:'left',id:'left',gen:'right'};
 let dbt=null;
 const imgCache={}; 
 
-// ── FONT WEIGHT BUTTONS ────────────────────────────────────────────────────
+// ── FONT WEIGHT & ALIGNMENT BUTTONS ────────────────────────────────────────
 const FW_OPTS=[{l:'400',v:400},{l:'600',v:600},{l:'700',v:700},{l:'800',v:800}];
+const ALIGN_OPTS=[
+  {l:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>', v:'left'},
+  {l:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>', v:'center'},
+  {l:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>', v:'right'}
+];
+
 ['name','sub','id','gen'].forEach(field=>{
-  const cont=document.getElementById('fw-'+field);
-  FW_OPTS.forEach(o=>{
-    const b=document.createElement('button');
-    b.className='fwbtn'+(fw[field]===o.v?' on':'');
-    b.textContent=o.l;
-    b.onclick=()=>{
-      fw[field]=o.v;
-      cont.querySelectorAll('.fwbtn').forEach(x=>x.classList.remove('on'));
-      b.classList.add('on');
-      rd();
-    };
-    cont.appendChild(b);
-  });
+  // Setup Font Weight
+  const fwCont=document.getElementById('fw-'+field);
+  if(fwCont){
+    FW_OPTS.forEach(o=>{
+      const b=document.createElement('button');
+      b.className='fwbtn'+(fw[field]===o.v?' on':'');
+      b.textContent=o.l;
+      b.onclick=()=>{
+        fw[field]=o.v;
+        fwCont.querySelectorAll('.fwbtn').forEach(x=>x.classList.remove('on'));
+        b.classList.add('on');
+        rd();
+      };
+      fwCont.appendChild(b);
+    });
+  }
+
+  // Setup Text Alignment
+  const taCont=document.getElementById('ta-'+field);
+  if(taCont){
+    ALIGN_OPTS.forEach(o=>{
+      const b=document.createElement('button');
+      b.className='fwbtn'+(align[field]===o.v?' on':'');
+      b.innerHTML=o.l;
+      b.title = "Align " + o.v;
+      b.style.display='flex'; b.style.alignItems='center'; b.style.justifyContent='center';
+      b.onclick=()=>{
+        align[field]=o.v;
+        taCont.querySelectorAll('.fwbtn').forEach(x=>x.classList.remove('on'));
+        b.classList.add('on');
+        
+        // Auto-snap X position based on alignment
+        let newX = 5; // Default left
+        if (o.v === 'center') newX = 31.5; // Exactly center of 63mm width
+        if (o.v === 'right') newX = 58;    // Default right
+        
+        document.getElementById('fx-'+field).value = newX;
+        document.getElementById('n-fx-'+field).value = newX;
+        
+        rd();
+      };
+      taCont.appendChild(b);
+    });
+  }
 });
 
 // ── TWO-WAY SYNC (Slider <-> Text Input) ───────────────────────────────────
@@ -746,12 +802,14 @@ async function renderCard(card,W,H){
   ctx.font=`${fw.name} ${fsN}px 'Poppins',sans-serif`;
   ctx.fillStyle=gv('fc-name');
   ctx.textBaseline='top';
+  ctx.textAlign=align.name; // <--- Dinamis sesuai tombol align
   ctx.fillText(card.name||'', gn('fx-name')*scaleX, gn('fy-name')*scaleY);
 
   // SUBTITLE
   const fsS=ptToPx(gn('fs-sub'));
   ctx.font=`${fw.sub} ${fsS}px 'Poppins',sans-serif`;
   ctx.fillStyle=gv('fc-sub');
+  ctx.textAlign=align.sub; // <--- Dinamis sesuai tombol align
   ctx.fillText(card.sub||'', gn('fx-sub')*scaleX, gn('fy-sub')*scaleY);
 
   // ── TYPE ICONS LOGIC ──────────────────────────────────────────────────────
@@ -804,7 +862,7 @@ async function renderCard(card,W,H){
   ctx.font=`${fw.id} ${fsI}px 'Poppins',sans-serif`;
   ctx.fillStyle=gv('fc-id');
   ctx.textBaseline='bottom';
-  ctx.textAlign='left';
+  ctx.textAlign=align.id; // <--- Dinamis sesuai tombol align
   const idStr=card.id?'#'+String(card.id).padStart(4,'0'):'';
   ctx.fillText(idStr, gn('fx-id')*scaleX, gn('fy-id')*scaleY);
 
@@ -812,7 +870,7 @@ async function renderCard(card,W,H){
   const fsG=ptToPx(gn('fs-gen'));
   ctx.font=`${fw.gen} ${fsG}px 'Poppins',sans-serif`;
   ctx.fillStyle=gv('fc-gen');
-  ctx.textAlign='right';
+  ctx.textAlign=align.gen; // <--- Dinamis sesuai tombol align
   ctx.fillText(card.right||'', gn('fx-gen')*scaleX, gn('fy-gen')*scaleY);
   ctx.textAlign='left';
   ctx.textBaseline='alphabetic';
