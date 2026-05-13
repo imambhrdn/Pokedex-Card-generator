@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pokedex Card Generator v3</title>
+<title>Pokedex Card Generator v5.1 (Smart Type Alignment)</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -60,8 +60,13 @@ hr.div{border:none;border-top:1px solid var(--bor);}
 .frow{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
 .flbl{font-size:9px;color:var(--mut2);width:30px;flex-shrink:0;}
 .frow input[type=range]{flex:1;height:3px;accent-color:var(--acc);cursor:pointer;}
-.fval{font-size:10px;color:var(--acc2);min-width:22px;text-align:right;font-weight:600;}
-.funit{font-size:8px;color:var(--mut);}
+
+/* CUSTOM NUMBER INPUT FOR COORDINATES */
+.fnum{width:36px; background:var(--sur); border:1px solid var(--bor); border-radius:4px; color:var(--acc2); font-size:10px; font-weight:600; font-family:var(--font); text-align:center; padding:3px 0; -moz-appearance:textfield; transition:border 0.15s;}
+.fnum:focus{outline:none; border-color:var(--acc);}
+.fnum::-webkit-outer-spin-button, .fnum::-webkit-inner-spin-button {-webkit-appearance:none; margin:0;}
+.funit{font-size:8px;color:var(--mut); width:14px;}
+
 .fwrow{display:flex;gap:3px;margin-bottom:5px;}
 .fwbtn{flex:1;padding:3px 2px;border-radius:4px;border:1px solid var(--bor);background:var(--bg);color:var(--mut2);font-size:9px;font-family:var(--font);cursor:pointer;transition:all .12s;text-align:center;}
 .fwbtn.on{background:rgba(108,92,231,.15);border-color:var(--acc);color:var(--acc2);}
@@ -118,7 +123,6 @@ hr.div{border:none;border-top:1px solid var(--bor);}
 .cov button:hover{background:var(--acc);}
 .cov button.del:hover{background:rgba(225,112,85,.8);}
 
-/* image cache */
 #imgCache{display:none;}
 </style>
 </head>
@@ -127,7 +131,7 @@ hr.div{border:none;border-top:1px solid var(--bor);}
 <header>
   <div class="logo"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 14c-2.67 0-5.03-1.37-6.42-3.44.03-2.13 4.28-3.3 6.42-3.3s6.39 1.17 6.42 3.3C17.03 18.63 14.67 20 12 20z"/></svg></div>
   <div><div class="ht">Pokedex Card Generator</div><div class="hs">Excel + Gambar → PDF A4 & PNGs</div></div>
-  <div class="hpill">v4</div>
+  <div class="hpill">v5.1</div>
 </header>
 
 <div class="wrap">
@@ -146,12 +150,24 @@ hr.div{border:none;border-top:1px solid var(--bor);}
   <hr class="div">
 
   <div>
-    <div class="slbl">2. Data Excel / CSV</div>
+    <div class="slbl">2. Ikon Type Pokemon</div>
+    <div class="ucard" id="tyUp" onclick="document.getElementById('tyIn').click()">
+      <input type="file" id="tyIn" accept="image/*" multiple style="display:none">
+      <div class="uico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
+      <div class="ut">Upload Ikon Type</div>
+      <div class="us">Nama file = nama type<br>(cth: grass.png, fire.png)</div>
+    </div>
+  </div>
+
+  <hr class="div">
+
+  <div>
+    <div class="slbl">3. Data Excel / CSV</div>
     <div class="ucard" id="xlUp" onclick="document.getElementById('xlIn').click()">
       <input type="file" id="xlIn" accept=".xlsx,.xls,.csv" style="display:none">
       <div class="uico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
       <div class="ut">Upload Excel / CSV</div>
-      <div class="us">id, nama, subtitle, kanan bawah, url gambar</div>
+      <div class="us">id, nama, type 1, type 2, dll</div>
     </div>
     <div id="colMap" style="display:none;margin-top:10px;">
       <div class="slbl">Mapping Kolom</div>
@@ -159,6 +175,8 @@ hr.div{border:none;border-top:1px solid var(--bor);}
         <div class="crow"><span class="clbl">ID</span><select class="csel" id="mId"></select></div>
         <div class="crow"><span class="clbl">Nama</span><select class="csel" id="mName"></select></div>
         <div class="crow"><span class="clbl">Subtitle</span><select class="csel" id="mSub"></select></div>
+        <div class="crow"><span class="clbl">Type 1</span><select class="csel" id="mType1"></select></div>
+        <div class="crow"><span class="clbl">Type 2</span><select class="csel" id="mType2"></select></div>
         <div class="crow"><span class="clbl">Kanan bawah</span><select class="csel" id="mRight"></select></div>
         <div class="crow" id="mUrlRow" style="display:none"><span class="clbl">URL Gambar</span><select class="csel" id="mUrl"></select></div>
       </div>
@@ -169,7 +187,7 @@ hr.div{border:none;border-top:1px solid var(--bor);}
   <hr class="div">
 
   <div>
-    <div class="slbl">3. Sumber Gambar</div>
+    <div class="slbl">4. Sumber Gambar Pokemon</div>
     <div class="stog">
       <button class="sbtn active" id="sUp" onclick="setSrc('upload')">Upload file<br><span style="font-weight:400;font-size:8px;">1.png, 2.png...</span></button>
       <button class="sbtn" id="sUrl" onclick="setSrc('url')">URL dari CSV<br><span style="font-weight:400;font-size:8px;">kolom link</span></button>
@@ -178,7 +196,7 @@ hr.div{border:none;border-top:1px solid var(--bor);}
       <div class="ucard" id="imUp" onclick="document.getElementById('imIn').click()">
         <input type="file" id="imIn" accept="image/*" multiple style="display:none">
         <div class="uico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="9" height="9" rx="1"/><rect x="13" y="2" width="9" height="9" rx="1"/><rect x="2" y="13" width="9" height="9" rx="1"/><rect x="13" y="13" width="9" height="9" rx="1"/></svg></div>
-        <div class="ut">Upload gambar</div>
+        <div class="ut">Upload gambar utama</div>
         <div class="us">Nama file = angka ID<br>1.png, 2.png, 11.png...</div>
       </div>
     </div>
@@ -191,51 +209,159 @@ hr.div{border:none;border-top:1px solid var(--bor);}
   <hr class="div">
 
   <div>
-    <div class="slbl">4. Teks &amp; Posisi</div>
+    <div class="slbl">5. Teks &amp; Posisi</div>
     <div class="fpanel">
 
       <div class="fblock">
         <div class="fblock-title">Nama Pokemon</div>
         <div class="fwrow" id="fw-name"></div>
-        <div class="frow"><span class="flbl">Size</span><input type="range" min="6" max="72" value="18" id="fs-name" oninput="fv(this,'fv-name');rd()"><span class="fval" id="fv-name">18</span><span class="funit">pt</span></div>
-        <div class="frow"><span class="flbl">X pos</span><input type="range" min="0" max="63" value="5" step=".5" id="fx-name" oninput="fv(this,'fvx-name');rd()"><span class="fval" id="fvx-name">5</span><span class="funit">mm</span></div>
-        <div class="frow"><span class="flbl">Y pos</span><input type="range" min="0" max="88" value="4" step=".5" id="fy-name" oninput="fv(this,'fvy-name');rd()"><span class="fval" id="fvy-name">4</span><span class="funit">mm</span></div>
+        <div class="frow">
+          <span class="flbl">Size</span>
+          <input type="range" min="6" max="72" value="18" id="fs-name" oninput="sync(this,'n-fs-name');rd()">
+          <input type="number" class="fnum" value="18" id="n-fs-name" oninput="sync(this,'fs-name');rd()">
+          <span class="funit">pt</span>
+        </div>
+        <div class="frow">
+          <span class="flbl">X pos</span>
+          <input type="range" min="-10" max="73" value="5" step=".5" id="fx-name" oninput="sync(this,'n-fx-name');rd()">
+          <input type="number" class="fnum" value="5" step=".5" id="n-fx-name" oninput="sync(this,'fx-name');rd()">
+          <span class="funit">mm</span>
+        </div>
+        <div class="frow">
+          <span class="flbl">Y pos</span>
+          <input type="range" min="-10" max="98" value="4" step=".5" id="fy-name" oninput="sync(this,'n-fy-name');rd()">
+          <input type="number" class="fnum" value="4" step=".5" id="n-fy-name" oninput="sync(this,'fy-name');rd()">
+          <span class="funit">mm</span>
+        </div>
         <div class="fcrow"><label>Warna</label><input type="color" id="fc-name" value="#111111" oninput="rd()"></div>
       </div>
 
       <div class="fblock">
         <div class="fblock-title">Subtitle</div>
         <div class="fwrow" id="fw-sub"></div>
-        <div class="frow"><span class="flbl">Size</span><input type="range" min="4" max="48" value="11" id="fs-sub" oninput="fv(this,'fv-sub');rd()"><span class="fval" id="fv-sub">11</span><span class="funit">pt</span></div>
-        <div class="frow"><span class="flbl">X pos</span><input type="range" min="0" max="63" value="5" step=".5" id="fx-sub" oninput="fv(this,'fvx-sub');rd()"><span class="fval" id="fvx-sub">5</span><span class="funit">mm</span></div>
-        <div class="frow"><span class="flbl">Y pos</span><input type="range" min="0" max="88" value="11" step=".5" id="fy-sub" oninput="fv(this,'fvy-sub');rd()"><span class="fval" id="fvy-sub">11</span><span class="funit">mm</span></div>
+        <div class="frow">
+          <span class="flbl">Size</span>
+          <input type="range" min="4" max="48" value="11" id="fs-sub" oninput="sync(this,'n-fs-sub');rd()">
+          <input type="number" class="fnum" value="11" id="n-fs-sub" oninput="sync(this,'fs-sub');rd()">
+          <span class="funit">pt</span>
+        </div>
+        <div class="frow">
+          <span class="flbl">X pos</span>
+          <input type="range" min="-10" max="73" value="5" step=".5" id="fx-sub" oninput="sync(this,'n-fx-sub');rd()">
+          <input type="number" class="fnum" value="5" step=".5" id="n-fx-sub" oninput="sync(this,'fx-sub');rd()">
+          <span class="funit">mm</span>
+        </div>
+        <div class="frow">
+          <span class="flbl">Y pos</span>
+          <input type="range" min="-10" max="98" value="11" step=".5" id="fy-sub" oninput="sync(this,'n-fy-sub');rd()">
+          <input type="number" class="fnum" value="11" step=".5" id="n-fy-sub" oninput="sync(this,'fy-sub');rd()">
+          <span class="funit">mm</span>
+        </div>
         <div class="fcrow"><label>Warna</label><input type="color" id="fc-sub" value="#444444" oninput="rd()"></div>
       </div>
 
       <div class="fblock">
+        <div class="fblock-title">Ikon Type Pokemon</div>
+        <div class="frow">
+          <span class="flbl">Size</span>
+          <input type="range" min="3" max="30" value="9" step=".5" id="t-s" oninput="sync(this,'n-t-s');rd()">
+          <input type="number" class="fnum" value="9" step=".5" id="n-t-s" oninput="sync(this,'t-s');rd()">
+          <span class="funit">mm</span>
+        </div>
+        <div class="frow">
+          <span class="flbl">X pos</span>
+          <input type="range" min="-10" max="73" value="43" step=".5" id="t-x" oninput="sync(this,'n-t-x');rd()">
+          <input type="number" class="fnum" value="43" step=".5" id="n-t-x" oninput="sync(this,'t-x');rd()">
+          <span class="funit">mm</span>
+        </div>
+        <div class="frow">
+          <span class="flbl">Y pos</span>
+          <input type="range" min="-10" max="98" value="4.5" step=".5" id="t-y" oninput="sync(this,'n-t-y');rd()">
+          <input type="number" class="fnum" value="4.5" step=".5" id="n-t-y" oninput="sync(this,'t-y');rd()">
+          <span class="funit">mm</span>
+        </div>
+        <div class="frow">
+          <span class="flbl">Gap</span>
+          <input type="range" min="0" max="15" value="1" step=".5" id="t-g" oninput="sync(this,'n-t-g');rd()">
+          <input type="number" class="fnum" value="1" step=".5" id="n-t-g" oninput="sync(this,'t-g');rd()">
+          <span class="funit">mm</span>
+        </div>
+      </div>
+
+      <div class="fblock">
         <div class="fblock-title">Gambar Pokemon</div>
-        <div class="frow"><span class="flbl">Lebar</span><input type="range" min="10" max="63" value="42" id="iw" oninput="fv(this,'ivw');rd()"><span class="fval" id="ivw">42</span><span class="funit">mm</span></div>
-        <div class="frow"><span class="flbl">Tinggi</span><input type="range" min="10" max="88" value="35" id="ih" oninput="fv(this,'ivh');rd()"><span class="fval" id="ivh">35</span><span class="funit">mm</span></div>
-        <div class="frow"><span class="flbl">X pos</span><input type="range" min="-10" max="63" value="11" step=".5" id="ix" oninput="fv(this,'ivx');rd()"><span class="fval" id="ivx">11</span><span class="funit">mm</span></div>
-        <div class="frow"><span class="flbl">Y pos</span><input type="range" min="0" max="88" value="24" step=".5" id="iy" oninput="fv(this,'ivy');rd()"><span class="fval" id="ivy">24</span><span class="funit">mm</span></div>
+        <div class="frow">
+          <span class="flbl">Lebar</span>
+          <input type="range" min="10" max="63" value="42" step=".5" id="iw" oninput="sync(this,'n-iw');rd()">
+          <input type="number" class="fnum" value="42" step=".5" id="n-iw" oninput="sync(this,'iw');rd()">
+          <span class="funit">mm</span>
+        </div>
+        <div class="frow">
+          <span class="flbl">Tinggi</span>
+          <input type="range" min="10" max="88" value="35" step=".5" id="ih" oninput="sync(this,'n-ih');rd()">
+          <input type="number" class="fnum" value="35" step=".5" id="n-ih" oninput="sync(this,'ih');rd()">
+          <span class="funit">mm</span>
+        </div>
+        <div class="frow">
+          <span class="flbl">X pos</span>
+          <input type="range" min="-20" max="73" value="11" step=".5" id="ix" oninput="sync(this,'n-ix');rd()">
+          <input type="number" class="fnum" value="11" step=".5" id="n-ix" oninput="sync(this,'ix');rd()">
+          <span class="funit">mm</span>
+        </div>
+        <div class="frow">
+          <span class="flbl">Y pos</span>
+          <input type="range" min="-20" max="98" value="24" step=".5" id="iy" oninput="sync(this,'n-iy');rd()">
+          <input type="number" class="fnum" value="24" step=".5" id="n-iy" oninput="sync(this,'iy');rd()">
+          <span class="funit">mm</span>
+        </div>
         <button class="btn" style="margin-top:5px;font-size:10px;" onclick="centerImage()">Center Gambar</button>
       </div>
 
       <div class="fblock">
         <div class="fblock-title">ID (kiri bawah)</div>
         <div class="fwrow" id="fw-id"></div>
-        <div class="frow"><span class="flbl">Size</span><input type="range" min="4" max="24" value="10" id="fs-id" oninput="fv(this,'fv-id');rd()"><span class="fval" id="fv-id">10</span><span class="funit">pt</span></div>
-        <div class="frow"><span class="flbl">X pos</span><input type="range" min="0" max="63" value="4" step=".5" id="fx-id" oninput="fv(this,'fvx-id');rd()"><span class="fval" id="fvx-id">4</span><span class="funit">mm</span></div>
-        <div class="frow"><span class="flbl">Y pos</span><input type="range" min="70" max="88" value="82" step=".5" id="fy-id" oninput="fv(this,'fvy-id');rd()"><span class="fval" id="fvy-id">82</span><span class="funit">mm</span></div>
+        <div class="frow">
+          <span class="flbl">Size</span>
+          <input type="range" min="4" max="24" value="10" id="fs-id" oninput="sync(this,'n-fs-id');rd()">
+          <input type="number" class="fnum" value="10" id="n-fs-id" oninput="sync(this,'fs-id');rd()">
+          <span class="funit">pt</span>
+        </div>
+        <div class="frow">
+          <span class="flbl">X pos</span>
+          <input type="range" min="-10" max="73" value="4" step=".5" id="fx-id" oninput="sync(this,'n-fx-id');rd()">
+          <input type="number" class="fnum" value="4" step=".5" id="n-fx-id" oninput="sync(this,'fx-id');rd()">
+          <span class="funit">mm</span>
+        </div>
+        <div class="frow">
+          <span class="flbl">Y pos</span>
+          <input type="range" min="-10" max="98" value="82" step=".5" id="fy-id" oninput="sync(this,'n-fy-id');rd()">
+          <input type="number" class="fnum" value="82" step=".5" id="n-fy-id" oninput="sync(this,'fy-id');rd()">
+          <span class="funit">mm</span>
+        </div>
         <div class="fcrow"><label>Warna</label><input type="color" id="fc-id" value="#111111" oninput="rd()"></div>
       </div>
 
       <div class="fblock">
         <div class="fblock-title">Kanan Bawah (Generation)</div>
         <div class="fwrow" id="fw-gen"></div>
-        <div class="frow"><span class="flbl">Size</span><input type="range" min="4" max="24" value="10" id="fs-gen" oninput="fv(this,'fv-gen');rd()"><span class="fval" id="fv-gen">10</span><span class="funit">pt</span></div>
-        <div class="frow"><span class="flbl">X pos</span><input type="range" min="40" max="63" value="58" step=".5" id="fx-gen" oninput="fv(this,'fvx-gen');rd()"><span class="fval" id="fvx-gen">58</span><span class="funit">mm</span></div>
-        <div class="frow"><span class="flbl">Y pos</span><input type="range" min="70" max="88" value="82" step=".5" id="fy-gen" oninput="fv(this,'fvy-gen');rd()"><span class="fval" id="fvy-gen">82</span><span class="funit">mm</span></div>
+        <div class="frow">
+          <span class="flbl">Size</span>
+          <input type="range" min="4" max="24" value="10" id="fs-gen" oninput="sync(this,'n-fs-gen');rd()">
+          <input type="number" class="fnum" value="10" id="n-fs-gen" oninput="sync(this,'fs-gen');rd()">
+          <span class="funit">pt</span>
+        </div>
+        <div class="frow">
+          <span class="flbl">X pos</span>
+          <input type="range" min="-10" max="73" value="58" step=".5" id="fx-gen" oninput="sync(this,'n-fx-gen');rd()">
+          <input type="number" class="fnum" value="58" step=".5" id="n-fx-gen" oninput="sync(this,'fx-gen');rd()">
+          <span class="funit">mm</span>
+        </div>
+        <div class="frow">
+          <span class="flbl">Y pos</span>
+          <input type="range" min="-10" max="98" value="82" step=".5" id="fy-gen" oninput="sync(this,'n-fy-gen');rd()">
+          <input type="number" class="fnum" value="82" step=".5" id="n-fy-gen" oninput="sync(this,'fy-gen');rd()">
+          <span class="funit">mm</span>
+        </div>
         <div class="fcrow"><label>Warna</label><input type="color" id="fc-gen" value="#111111" oninput="rd()"></div>
       </div>
 
@@ -280,7 +406,7 @@ hr.div{border:none;border-top:1px solid var(--bor);}
 
 </div><div class="prev">
   <div class="prevh">Preview Kartu</div>
-  <div class="prevs">Perubahan slider langsung terlihat di preview. Arahkan kursor ke kartu untuk download individual.</div>
+  <div class="prevs">Anda bisa menggeser slider atau <b>mengetik langsung angka</b> di kolom koordinat.</div>
   <div id="prevWrap">
     <div style="text-align:center;padding:60px 24px;color:var(--mut);">
       <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=".8" style="opacity:.12;display:block;margin:0 auto 12px;"><rect x="3" y="3" width="18" height="18"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -293,10 +419,10 @@ hr.div{border:none;border-top:1px solid var(--bor);}
 
 <script>
 // ── STATE ──────────────────────────────────────────────────────────────────
-let bgImg=null, exRows=[], cards=[], imgMap={}, imgSrc='upload', qual='print';
+let bgImg=null, exRows=[], cards=[], imgMap={}, typeImgMap={}, imgSrc='upload', qual='print';
 let fw={name:700,sub:400,id:700,gen:500};
 let dbt=null;
-const imgCache={}; // url → dataURL (pre-fetched via Image tag)
+const imgCache={}; 
 
 // ── FONT WEIGHT BUTTONS ────────────────────────────────────────────────────
 const FW_OPTS=[{l:'400',v:400},{l:'600',v:600},{l:'700',v:700},{l:'800',v:800}];
@@ -316,22 +442,31 @@ const FW_OPTS=[{l:'400',v:400},{l:'600',v:600},{l:'700',v:700},{l:'800',v:800}];
   });
 });
 
-// ── SLIDER HELPER ──────────────────────────────────────────────────────────
-function fv(el,valId){document.getElementById(valId).textContent=el.value;}
+// ── TWO-WAY SYNC (Slider <-> Text Input) ───────────────────────────────────
+function sync(el, targetId) {
+  document.getElementById(targetId).value = el.value;
+}
+
+// ── VALUE GETTERS ──────────────────────────────────────────────────────────
 function gn(id){return parseFloat(document.getElementById(id).value);}
 function gv(id){return document.getElementById(id).value;}
 function rd(){clearTimeout(dbt);dbt=setTimeout(renderPreview,100);}
 
 // ── CENTER IMAGE ─────────────────────────────────────────────────────────────
 function centerImage(){
-  const imgW=gn('iw'); // dalam mm
-  const imgH=gn('ih'); // dalam mm
+  const imgW=gn('iw'); 
+  const imgH=gn('ih'); 
   const centerX=((63-imgW)/2).toFixed(1);
   const centerY=((88-imgH)/2).toFixed(1);
+  
+  // Set nilai ke slider
   document.getElementById('ix').value=centerX;
   document.getElementById('iy').value=centerY;
-  fv(document.getElementById('ix'),'ivx');
-  fv(document.getElementById('iy'),'ivy');
+  
+  // Set nilai ke input text/number
+  document.getElementById('n-ix').value=centerX;
+  document.getElementById('n-iy').value=centerY;
+  
   rd();
 }
 
@@ -372,6 +507,23 @@ document.getElementById('bgIn').onchange=e=>{
   r.readAsDataURL(f);
 };
 
+// ── TYPE IMAGE UPLOAD ──────────────────────────────────────────────────────
+document.getElementById('tyIn').onchange=e=>{
+  const files=[...e.target.files].filter(f=>f.type.startsWith('image/'));
+  if(!files.length) return;
+  typeImgMap={};
+  let done=0;
+  files.forEach(f=>{
+    const key=f.name.replace(/\.[^.]+$/,'').toLowerCase().trim();
+    const r=new FileReader();
+    r.onload=ev=>{
+      typeImgMap[key]=ev.target.result;
+      if(++done===files.length){markDone('tyUp',`${files.length} ikon type`);rd();}
+    };
+    r.readAsDataURL(f);
+  });
+};
+
 // ── EXCEL UPLOAD ───────────────────────────────────────────────────────────
 document.getElementById('xlIn').onchange=e=>{
   const f=e.target.files[0]; if(!f) return;
@@ -383,17 +535,23 @@ document.getElementById('xlIn').onchange=e=>{
     if(!exRows.length) return;
     const cols=Object.keys(exRows[0]);
     markDone('xlUp',`${f.name} · ${exRows.length} baris`);
-    ['mId','mName','mSub','mRight','mUrl'].forEach(id=>{
+    
+    // Setup Mapping Options
+    ['mId','mName','mSub','mType1','mType2','mRight','mUrl'].forEach(id=>{
       const sel=document.getElementById(id);
       sel.innerHTML='<option value="">— pilih —</option>';
       cols.forEach(c=>sel.innerHTML+=`<option value="${c}">${c}</option>`);
     });
+
     const auto=kws=>cols.find(c=>kws.some(k=>c.toLowerCase().includes(k)))||'';
     document.getElementById('mId').value    =auto(['id','no','num']);
     document.getElementById('mName').value  =auto(['name','nama','pokemon']);
-    document.getElementById('mSub').value   =auto(['sub','evolv','desc','type','tipe']);
+    document.getElementById('mSub').value   =auto(['sub','evolv','desc','habitat']);
+    document.getElementById('mType1').value =auto(['type 1','type1','tipe 1','type']);
+    document.getElementById('mType2').value =auto(['type 2','type2','tipe 2']);
     document.getElementById('mRight').value =auto(['gen','generation','right','kanan','rar']);
     document.getElementById('mUrl').value   =auto(['url','img','image','foto','pic','link','gambar']);
+    
     document.getElementById('colMap').style.display='block';
     applyMap();
   };
@@ -402,7 +560,7 @@ document.getElementById('xlIn').onchange=e=>{
 
 function applyMap(){rebuild();}
 
-// ── IMAGE UPLOAD ───────────────────────────────────────────────────────────
+// ── IMAGE UPLOAD (MAIN POKEMON) ────────────────────────────────────────────
 document.getElementById('imIn').onchange=e=>{
   const files=[...e.target.files].filter(f=>f.type.startsWith('image/'));
   if(!files.length) return;
@@ -422,22 +580,34 @@ document.getElementById('imIn').onchange=e=>{
 // ── REBUILD CARDS ──────────────────────────────────────────────────────────
 function rebuild(){
   if(!exRows.length) return;
-  const mId=gv('mId'),mName=gv('mName'),mSub=gv('mSub'),mRight=gv('mRight'),mUrl=gv('mUrl');
+  const mId=gv('mId'), mName=gv('mName'), mSub=gv('mSub');
+  const mType1=gv('mType1'), mType2=gv('mType2');
+  const mRight=gv('mRight'), mUrl=gv('mUrl');
+  
   cards=exRows.map(row=>{
     const id=String(row[mId]||'').trim();
     const numKey=String(parseInt(id)||id);
     let src=null;
     if(imgSrc==='url'&&mUrl) src=String(row[mUrl]||'').trim()||null;
     else src=imgMap[id]||imgMap[numKey]||null;
-    return{id,src,name:mName?String(row[mName]||''):'',sub:mSub?String(row[mSub]||''):'',right:mRight?String(row[mRight]||''):''};
+    
+    return {
+      id, src,
+      name: mName ? String(row[mName]||'') : '',
+      sub: mSub ? String(row[mSub]||'') : '',
+      type1: mType1 ? String(row[mType1]||'') : '',
+      type2: mType2 ? String(row[mType2]||'') : '',
+      right: mRight ? String(row[mRight]||'') : ''
+    };
   });
+  
   const ok=cards.filter(c=>c.src).length;
   document.getElementById('stCards').textContent=cards.length;
   document.getElementById('stPages').textContent=Math.ceil(cards.length/9);
   document.getElementById('stOk').textContent=ok;
   document.getElementById('stMiss').textContent=cards.length-ok;
   checkReady();
-  // Pre-fetch URL images into cache
+  
   if(imgSrc==='url'){
     cards.forEach(c=>{if(c.src&&!imgCache[c.src]) prefetchImg(c.src);});
   }
@@ -564,7 +734,6 @@ async function renderCard(card,W,H){
   ctx.imageSmoothingEnabled=true;
   ctx.imageSmoothingQuality='high';
 
-  // Jika background memiliki transparansi, kita perlu bersihkan canvas
   ctx.clearRect(0,0,W,H);
   ctx.drawImage(bgImg,0,0,W,H);
 
@@ -584,6 +753,37 @@ async function renderCard(card,W,H){
   ctx.font=`${fw.sub} ${fsS}px 'Poppins',sans-serif`;
   ctx.fillStyle=gv('fc-sub');
   ctx.fillText(card.sub||'', gn('fx-sub')*scaleX, gn('fy-sub')*scaleY);
+
+  // ── TYPE ICONS LOGIC ──────────────────────────────────────────────────────
+  const typeSize = gn('t-s') * scaleX;
+  const typeGap = gn('t-g') * scaleX;
+  const typeStartX = gn('t-x') * scaleX; // Posisi Kiri
+  const typeY = gn('t-y') * scaleY;
+
+  async function drawTypeIconAt(typeStr, xPos) {
+    if(!typeStr) return;
+    const key = typeStr.toLowerCase().trim();
+    const b64 = typeImgMap[key];
+    if(b64) {
+      const tImg = await loadImgFromSrc(b64);
+      if(tImg) {
+        ctx.drawImage(tImg, xPos, typeY, typeSize, typeSize);
+      }
+    }
+  }
+
+  const t1 = card.type1 ? card.type1.trim() : "";
+  const t2 = card.type2 ? card.type2.trim() : "";
+
+  if (t1 && t2) {
+    // Jika ada 2 type: Kiri (Type 1) dan Kanan (Type 2)
+    await drawTypeIconAt(t1, typeStartX);
+    await drawTypeIconAt(t2, typeStartX + typeSize + typeGap);
+  } else if (t1 || t2) {
+    // Jika hanya ada 1 type: Letakkan di posisi Kanan
+    const singleType = t1 || t2;
+    await drawTypeIconAt(singleType, typeStartX + typeSize + typeGap);
+  }
 
   // POKEMON IMAGE
   if(card.src){
@@ -647,24 +847,20 @@ async function renderPreview(){
         
         const ov=document.createElement('div');ov.className='cov';
         
-        // --- BUTTON: DOWNLOAD PNG INDIVIDUAL ---
         const btnDl=document.createElement('button');
         btnDl.title="Download PNG";
         btnDl.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
         btnDl.onclick=async ()=>{
-          // Render High-res untuk download
           const dpi=300; const MM=dpi/25.4;
           const CW=Math.round(63*MM); const CH=Math.round(88*MM);
           const dlCvs = await renderCard(show[idx], CW, CH);
           const a = document.createElement('a');
-          // --- DIUBAH KE PNG ---
           a.href = dlCvs.toDataURL('image/png');
           const safeName = (show[idx].name || show[idx].id || 'kartu').replace(/[^a-z0-9]/gi, '_');
           a.download = safeName + '.png';
           a.click();
         };
         
-        // --- BUTTON: HAPUS ---
         const btnDel=document.createElement('button');
         btnDel.className='del';
         btnDel.title="Hapus Kartu";
@@ -714,7 +910,6 @@ async function genPDF(){
     cvs.width=PW;cvs.height=PH;
     const ctx=cvs.getContext('2d');
     ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-    // Background putih untuk kertas PDF
     ctx.fillStyle='#ffffff';ctx.fillRect(0,0,PW,PH);
 
     for(let s=0;s<9;s++){
@@ -726,8 +921,6 @@ async function genPDF(){
       ctx.drawImage(cc,x,y);
     }
 
-    // Untuk PDF, kita tetap gunakan FlateDecode (PNG style) agar teks tajam
-    // canvas.toDataURL('image/png') adalah default jika mime tidak ditentukan
     const du=cvs.toDataURL('image/png');
     const bin=atob(du.split(',')[1]);
     const bytes=new Uint8Array(bin.length);
@@ -769,7 +962,6 @@ async function genZIP(){
   pw.classList.add('show');
 
   const zip = new JSZip();
-  // Gunakan resolusi Print (300dpi) untuk hasil PNG
   const dpi = 300;
   const MM = dpi/25.4;
   const CW = Math.round(63*MM);
@@ -781,7 +973,6 @@ async function genZIP(){
     await new Promise(r=>setTimeout(r,10));
 
     const cvs = await renderCard(cards[i], CW, CH);
-    // --- DIUBAH KE PNG ---
     const data = cvs.toDataURL('image/png').split(',')[1];
     const safeName = (cards[i].id || i+1) + "_" + (cards[i].name || "kartu").replace(/[^a-z0-9]/gi, '_');
     zip.file(safeName + ".png", data, {base64: true});
@@ -826,7 +1017,6 @@ function buildPDF(pages){
     const pid=3+i*3,iid=4+i*3,cid=5+i*3;
     const{bytes,isJ,w:cw,h:ch}=pages[i];
     off[iid]=pos;
-    // Filter selalu /FlateDecode karena kita menggunakan PNG data
     w(`${iid} 0 obj\n<</Type/XObject/Subtype/Image/Width ${cw}/Height ${ch}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter /FlateDecode/Length ${bytes.length}>>\nstream\n`);
     wb(bytes);w('\nendstream\nendobj\n');
     const cont=enc.encode(`q ${PW} 0 0 ${PH} 0 0 cm /Im${i} Do Q`);
