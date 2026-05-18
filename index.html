@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pokedex Card Generator v5.2 (Text Alignment)</title>
+<title>Pokedex Card Generator v5.3 (PDF Fix)</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -131,7 +131,7 @@ hr.div{border:none;border-top:1px solid var(--bor);}
 <header>
   <div class="logo"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 14c-2.67 0-5.03-1.37-6.42-3.44.03-2.13 4.28-3.3 6.42-3.3s6.39 1.17 6.42 3.3C17.03 18.63 14.67 20 12 20z"/></svg></div>
   <div><div class="ht">Pokedex Card Generator</div><div class="hs">Excel + Gambar → PDF A4 & PNGs</div></div>
-  <div class="hpill">v5.2</div>
+  <div class="hpill">v5.3 Fix</div>
 </header>
 
 <div class="wrap">
@@ -212,7 +212,6 @@ hr.div{border:none;border-top:1px solid var(--bor);}
     <div class="slbl">5. Teks &amp; Posisi</div>
     <div class="fpanel">
 
-      <!-- NAMA POKEMON -->
       <div class="fblock">
         <div class="fblock-title">Nama Pokemon</div>
         <div style="display:flex; gap:8px; margin-bottom:6px;">
@@ -240,7 +239,6 @@ hr.div{border:none;border-top:1px solid var(--bor);}
         <div class="fcrow"><label>Warna</label><input type="color" id="fc-name" value="#111111" oninput="rd()"></div>
       </div>
 
-      <!-- SUBTITLE -->
       <div class="fblock">
         <div class="fblock-title">Subtitle</div>
         <div style="display:flex; gap:8px; margin-bottom:6px;">
@@ -268,7 +266,6 @@ hr.div{border:none;border-top:1px solid var(--bor);}
         <div class="fcrow"><label>Warna</label><input type="color" id="fc-sub" value="#444444" oninput="rd()"></div>
       </div>
 
-      <!-- IKON TYPE POKEMON -->
       <div class="fblock">
         <div class="fblock-title">Ikon Type Pokemon</div>
         <div class="frow">
@@ -297,7 +294,6 @@ hr.div{border:none;border-top:1px solid var(--bor);}
         </div>
       </div>
 
-      <!-- GAMBAR POKEMON -->
       <div class="fblock">
         <div class="fblock-title">Gambar Pokemon</div>
         <div class="frow">
@@ -327,7 +323,6 @@ hr.div{border:none;border-top:1px solid var(--bor);}
         <button class="btn" style="margin-top:5px;font-size:10px;" onclick="centerImage()">Center Gambar</button>
       </div>
 
-      <!-- ID -->
       <div class="fblock">
         <div class="fblock-title">ID (kiri bawah)</div>
         <div style="display:flex; gap:8px; margin-bottom:6px;">
@@ -355,7 +350,6 @@ hr.div{border:none;border-top:1px solid var(--bor);}
         <div class="fcrow"><label>Warna</label><input type="color" id="fc-id" value="#111111" oninput="rd()"></div>
       </div>
 
-      <!-- KANAN BAWAH -->
       <div class="fblock">
         <div class="fblock-title">Kanan Bawah (Generation)</div>
         <div style="display:flex; gap:8px; margin-bottom:6px;">
@@ -939,7 +933,7 @@ async function renderPreview(){
   wrap.innerHTML='';wrap.appendChild(frag);
 }
 
-// ── GENERATE PDF ────────────────────────────────────────────────────────────
+// ── GENERATE PDF (BUG FIX: USING JPEG FOR PDF XOBJECT) ──────────────────────
 async function genPDF(){
   if(!bgImg||!cards.length) return;
   const dpi={web:150,print:300,max:300}[qual];
@@ -968,6 +962,7 @@ async function genPDF(){
     cvs.width=PW;cvs.height=PH;
     const ctx=cvs.getContext('2d');
     ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+    // Wajib warna solid agar JPEG tidak menjadi hitam
     ctx.fillStyle='#ffffff';ctx.fillRect(0,0,PW,PH);
 
     for(let s=0;s<9;s++){
@@ -979,7 +974,8 @@ async function genPDF(){
       ctx.drawImage(cc,x,y);
     }
 
-    const du=cvs.toDataURL('image/png');
+    // [FIX]: Convert to JPEG instead of PNG for raw PDF embedding
+    const du=cvs.toDataURL('image/jpeg', 0.95);
     const bin=atob(du.split(',')[1]);
     const bytes=new Uint8Array(bin.length);
     for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
@@ -1075,7 +1071,8 @@ function buildPDF(pages){
     const pid=3+i*3,iid=4+i*3,cid=5+i*3;
     const{bytes,isJ,w:cw,h:ch}=pages[i];
     off[iid]=pos;
-    w(`${iid} 0 obj\n<</Type/XObject/Subtype/Image/Width ${cw}/Height ${ch}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter /FlateDecode/Length ${bytes.length}>>\nstream\n`);
+    // [FIX]: Change Filter from /FlateDecode to /DCTDecode for JPEG support
+    w(`${iid} 0 obj\n<</Type/XObject/Subtype/Image/Width ${cw}/Height ${ch}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter /DCTDecode/Length ${bytes.length}>>\nstream\n`);
     wb(bytes);w('\nendstream\nendobj\n');
     const cont=enc.encode(`q ${PW} 0 0 ${PH} 0 0 cm /Im${i} Do Q`);
     off[cid]=pos;w(`${cid} 0 obj\n<</Length ${cont.length}>>\nstream\n`);wb(cont);w('\nendstream\nendobj\n');
