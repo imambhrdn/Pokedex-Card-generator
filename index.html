@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pokedex Card Generator v5.3 (PDF Fix)</title>
+<title>Pokedex Card Generator v5.4 (Pagination)</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -123,6 +123,13 @@ hr.div{border:none;border-top:1px solid var(--bor);}
 .cov button:hover{background:var(--acc);}
 .cov button.del:hover{background:rgba(225,112,85,.8);}
 
+/* Pagination Controls */
+.pagwrap {display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; background:var(--sur); padding:8px 12px; border:1px solid var(--bor); border-radius:6px;}
+.pagbtn {background:var(--sur2); border:1px solid var(--bor); color:var(--txt); padding:5px 12px; border-radius:4px; font-size:11px; font-weight:600; cursor:pointer; transition:all .15s;}
+.pagbtn:hover:not(:disabled) {background:var(--bor); color:var(--acc2);}
+.pagbtn:disabled {opacity:0.4; cursor:not-allowed;}
+.paginfo {font-size:10px; color:var(--mut2); font-weight:500;}
+
 #imgCache{display:none;}
 </style>
 </head>
@@ -131,7 +138,7 @@ hr.div{border:none;border-top:1px solid var(--bor);}
 <header>
   <div class="logo"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 14c-2.67 0-5.03-1.37-6.42-3.44.03-2.13 4.28-3.3 6.42-3.3s6.39 1.17 6.42 3.3C17.03 18.63 14.67 20 12 20z"/></svg></div>
   <div><div class="ht">Pokedex Card Generator</div><div class="hs">Excel + Gambar → PDF A4 & PNGs</div></div>
-  <div class="hpill">v5.3 Fix</div>
+  <div class="hpill">v5.4</div>
 </header>
 
 <div class="wrap">
@@ -418,7 +425,7 @@ hr.div{border:none;border-top:1px solid var(--bor);}
 
 </div><div class="prev">
   <div class="prevh">Preview Kartu</div>
-  <div class="prevs">Anda bisa menggeser slider, mengetik angka, dan menggunakan <b>tombol perataan (Align)</b> untuk teks.</div>
+  <div class="prevs">Preview menampilkan 18 kartu per halaman. Gunakan tombol navigasi di bawah ini untuk melihat kartu lainnya.</div>
   <div id="prevWrap">
     <div style="text-align:center;padding:60px 24px;color:var(--mut);">
       <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=".8" style="opacity:.12;display:block;margin:0 auto 12px;"><rect x="3" y="3" width="18" height="18"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -434,6 +441,7 @@ hr.div{border:none;border-top:1px solid var(--bor);}
 let bgImg=null, exRows=[], cards=[], imgMap={}, typeImgMap={}, imgSrc='upload', qual='print';
 let fw={name:700,sub:400,id:700,gen:500};
 let align={name:'left',sub:'left',id:'left',gen:'right'};
+let previewPage = 0; // State untuk halaman pagination preview
 let dbt=null;
 const imgCache={}; 
 
@@ -446,7 +454,6 @@ const ALIGN_OPTS=[
 ];
 
 ['name','sub','id','gen'].forEach(field=>{
-  // Setup Font Weight
   const fwCont=document.getElementById('fw-'+field);
   if(fwCont){
     FW_OPTS.forEach(o=>{
@@ -463,7 +470,6 @@ const ALIGN_OPTS=[
     });
   }
 
-  // Setup Text Alignment
   const taCont=document.getElementById('ta-'+field);
   if(taCont){
     ALIGN_OPTS.forEach(o=>{
@@ -477,14 +483,12 @@ const ALIGN_OPTS=[
         taCont.querySelectorAll('.fwbtn').forEach(x=>x.classList.remove('on'));
         b.classList.add('on');
         
-        // Auto-snap X position based on alignment
-        let newX = 5; // Default left
-        if (o.v === 'center') newX = 31.5; // Exactly center of 63mm width
-        if (o.v === 'right') newX = 58;    // Default right
+        let newX = 5; 
+        if (o.v === 'center') newX = 31.5; 
+        if (o.v === 'right') newX = 58;    
         
         document.getElementById('fx-'+field).value = newX;
         document.getElementById('n-fx-'+field).value = newX;
-        
         rd();
       };
       taCont.appendChild(b);
@@ -492,42 +496,25 @@ const ALIGN_OPTS=[
   }
 });
 
-// ── TWO-WAY SYNC (Slider <-> Text Input) ───────────────────────────────────
-function sync(el, targetId) {
-  document.getElementById(targetId).value = el.value;
-}
-
-// ── VALUE GETTERS ──────────────────────────────────────────────────────────
+function sync(el, targetId) { document.getElementById(targetId).value = el.value; }
 function gn(id){return parseFloat(document.getElementById(id).value);}
 function gv(id){return document.getElementById(id).value;}
 function rd(){clearTimeout(dbt);dbt=setTimeout(renderPreview,100);}
 
-// ── CENTER IMAGE ─────────────────────────────────────────────────────────────
 function centerImage(){
-  const imgW=gn('iw'); 
-  const imgH=gn('ih'); 
-  const centerX=((63-imgW)/2).toFixed(1);
-  const centerY=((88-imgH)/2).toFixed(1);
-  
-  // Set nilai ke slider
-  document.getElementById('ix').value=centerX;
-  document.getElementById('iy').value=centerY;
-  
-  // Set nilai ke input text/number
-  document.getElementById('n-ix').value=centerX;
-  document.getElementById('n-iy').value=centerY;
-  
+  const imgW=gn('iw'); const imgH=gn('ih'); 
+  const centerX=((63-imgW)/2).toFixed(1); const centerY=((88-imgH)/2).toFixed(1);
+  document.getElementById('ix').value=centerX; document.getElementById('iy').value=centerY;
+  document.getElementById('n-ix').value=centerX; document.getElementById('n-iy').value=centerY;
   rd();
 }
 
-// ── QUALITY ────────────────────────────────────────────────────────────────
 function setQ(q){
   qual=q;
   document.querySelectorAll('.qbtn').forEach(b=>b.classList.remove('on'));
   document.getElementById('q-'+q).classList.add('on');
 }
 
-// ── SRC TOGGLE ─────────────────────────────────────────────────────────────
 function setSrc(s){
   imgSrc=s;
   document.getElementById('sUp').classList.toggle('active',s==='upload');
@@ -538,14 +525,12 @@ function setSrc(s){
   rebuild();
 }
 
-// ── MARK DONE ──────────────────────────────────────────────────────────────
 function markDone(id,lbl){
   const el=document.getElementById(id);
   el.classList.add('done');
   el.querySelector('.ut').textContent='✓ '+lbl;
 }
 
-// ── BG UPLOAD ──────────────────────────────────────────────────────────────
 document.getElementById('bgIn').onchange=e=>{
   const f=e.target.files[0]; if(!f) return;
   const r=new FileReader();
@@ -557,7 +542,6 @@ document.getElementById('bgIn').onchange=e=>{
   r.readAsDataURL(f);
 };
 
-// ── TYPE IMAGE UPLOAD ──────────────────────────────────────────────────────
 document.getElementById('tyIn').onchange=e=>{
   const files=[...e.target.files].filter(f=>f.type.startsWith('image/'));
   if(!files.length) return;
@@ -574,7 +558,6 @@ document.getElementById('tyIn').onchange=e=>{
   });
 };
 
-// ── EXCEL UPLOAD ───────────────────────────────────────────────────────────
 document.getElementById('xlIn').onchange=e=>{
   const f=e.target.files[0]; if(!f) return;
   const r=new FileReader();
@@ -586,7 +569,6 @@ document.getElementById('xlIn').onchange=e=>{
     const cols=Object.keys(exRows[0]);
     markDone('xlUp',`${f.name} · ${exRows.length} baris`);
     
-    // Setup Mapping Options
     ['mId','mName','mSub','mType1','mType2','mRight','mUrl'].forEach(id=>{
       const sel=document.getElementById(id);
       sel.innerHTML='<option value="">— pilih —</option>';
@@ -603,6 +585,9 @@ document.getElementById('xlIn').onchange=e=>{
     document.getElementById('mUrl').value   =auto(['url','img','image','foto','pic','link','gambar']);
     
     document.getElementById('colMap').style.display='block';
+    
+    // Reset pagination ketika file Excel baru diupload
+    previewPage = 0; 
     applyMap();
   };
   r.readAsBinaryString(f);
@@ -610,7 +595,6 @@ document.getElementById('xlIn').onchange=e=>{
 
 function applyMap(){rebuild();}
 
-// ── IMAGE UPLOAD (MAIN POKEMON) ────────────────────────────────────────────
 document.getElementById('imIn').onchange=e=>{
   const files=[...e.target.files].filter(f=>f.type.startsWith('image/'));
   if(!files.length) return;
@@ -627,7 +611,6 @@ document.getElementById('imIn').onchange=e=>{
   });
 };
 
-// ── REBUILD CARDS ──────────────────────────────────────────────────────────
 function rebuild(){
   if(!exRows.length) return;
   const mId=gv('mId'), mName=gv('mName'), mSub=gv('mSub');
@@ -670,7 +653,6 @@ function checkReady(){
   document.getElementById('btnZip').disabled=!isReady;
 }
 
-// ── IMAGE LOADING ──────────────────────────────────────────────────────────
 function prefetchImg(url){
   return new Promise(res=>{
     const cached=imgCache[url];
@@ -678,27 +660,21 @@ function prefetchImg(url){
       if(typeof cached==='object' && cached.type) return res(cached);
       if(typeof cached==='string'){
         const newVal=cached.startsWith('data:')?{type:'data', url:cached}:{type:'url', url:cached};
-        imgCache[url]=newVal;
-        return res(newVal);
+        imgCache[url]=newVal; return res(newVal);
       }
       if(cached===null) return res(null);
     }
-
     const tryLoad = (useCors) => {
       return new Promise((resolveLoad) => {
         const img=new Image();
         if(useCors) img.crossOrigin='anonymous';
         img.onload=()=>{
           try{
-            const c=document.createElement('canvas');
-            c.width=img.naturalWidth; c.height=img.naturalHeight;
-            c.getContext('2d').drawImage(img,0,0);
-            const dataUrl=c.toDataURL('image/png');
-            imgCache[url]={type:'data', url:dataUrl};
-            resolveLoad({type:'data', url:dataUrl});
+            const c=document.createElement('canvas'); c.width=img.naturalWidth; c.height=img.naturalHeight;
+            c.getContext('2d').drawImage(img,0,0); const dataUrl=c.toDataURL('image/png');
+            imgCache[url]={type:'data', url:dataUrl}; resolveLoad({type:'data', url:dataUrl});
           }catch(e){
-            imgCache[url]={type:'url', url:url};
-            resolveLoad({type:'url', url:url});
+            imgCache[url]={type:'url', url:url}; resolveLoad({type:'url', url:url});
           }
         };
         img.onerror=()=>{
@@ -708,10 +684,8 @@ function prefetchImg(url){
         img.src=url;
       });
     };
-
     tryLoad(true).then(result => {
-      if(result === 'retry') tryLoad(false).then(r => res(r));
-      else res(result);
+      if(result === 'retry') tryLoad(false).then(r => res(r)); else res(result);
     });
   });
 }
@@ -719,40 +693,27 @@ function prefetchImg(url){
 function loadImgFromSrc(src){
   return new Promise(res=>{
     if(!src) return res(null);
-
     if(src.startsWith('data:')){
-      const img=new Image();
-      img.onload=()=>res(img); img.onerror=()=>res(null);
-      img.src=src; return;
+      const img=new Image(); img.onload=()=>res(img); img.onerror=()=>res(null); img.src=src; return;
     }
-
     const cached=imgCache[src];
     if(cached && typeof cached==='object' && cached.type){
       if(cached.type==='error'||cached.url===null) return res(null);
-      const img=new Image();
-      img.onload=()=>res(img); img.onerror=()=>res(null);
-      img.src=cached.url; return;
+      const img=new Image(); img.onload=()=>res(img); img.onerror=()=>res(null); img.src=cached.url; return;
     }
     if(cached && typeof cached==='string'){
       if(cached===null) return res(null);
-      const img=new Image();
-      img.onload=()=>res(img); img.onerror=()=>res(null);
-      img.src=cached; return;
+      const img=new Image(); img.onload=()=>res(img); img.onerror=()=>res(null); img.src=cached; return;
     }
-
     const loadWithCors = () => {
       return new Promise(resolve => {
         const i=new Image(); i.crossOrigin='anonymous';
         i.onload=()=>{
           try{
-            const c=document.createElement('canvas');
-            c.width=i.naturalWidth;c.height=i.naturalHeight;
-            c.getContext('2d').drawImage(i,0,0);
-            const du=c.toDataURL('image/png');
+            const c=document.createElement('canvas'); c.width=i.naturalWidth;c.height=i.naturalHeight;
+            c.getContext('2d').drawImage(i,0,0); const du=c.toDataURL('image/png');
             imgCache[src]={type:'data', url:du};
-            const img2=new Image();
-            img2.onload=()=>resolve(img2); img2.onerror=()=>resolve(null);
-            img2.src=du;
+            const img2=new Image(); img2.onload=()=>resolve(img2); img2.onerror=()=>resolve(null); img2.src=du;
           }catch(e){
             imgCache[src]={type:'url', url:src}; resolve(i);
           }
@@ -760,132 +721,86 @@ function loadImgFromSrc(src){
         i.onerror=()=>resolve(null); i.src=src;
       });
     };
-
     const loadWithoutCors = () => {
       return new Promise(resolve => {
-        const i=new Image();
-        i.onload=()=>{ imgCache[src]={type:'url', url:src}; resolve(i); };
-        i.onerror=()=>{ imgCache[src]={type:'error', url:null}; resolve(null); };
-        i.src=src;
+        const i=new Image(); i.onload=()=>{ imgCache[src]={type:'url', url:src}; resolve(i); };
+        i.onerror=()=>{ imgCache[src]={type:'error', url:null}; resolve(null); }; i.src=src;
       });
     };
-
-    loadWithCors().then(result => {
-      if(result) res(result); else loadWithoutCors().then(r => res(r));
-    });
+    loadWithCors().then(result => { if(result) res(result); else loadWithoutCors().then(r => res(r)); });
   });
 }
 
-// ── RENDER ONE CARD ─────────────────────────────────────────────────────────
 async function renderCard(card,W,H){
-  const cvs=document.createElement('canvas');
-  cvs.width=W;cvs.height=H;
-  const ctx=cvs.getContext('2d');
-  ctx.imageSmoothingEnabled=true;
-  ctx.imageSmoothingQuality='high';
+  const cvs=document.createElement('canvas'); cvs.width=W; cvs.height=H;
+  const ctx=cvs.getContext('2d'); ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  ctx.clearRect(0,0,W,H); ctx.drawImage(bgImg,0,0,W,H);
 
-  ctx.clearRect(0,0,W,H);
-  ctx.drawImage(bgImg,0,0,W,H);
+  const scaleX=W/63; const scaleY=H/88; const ptToPx = (pt) => pt * 0.3527 * scaleX;
 
-  const scaleX=W/63; 
-  const scaleY=H/88; 
-  const ptToPx = (pt) => pt * 0.3527 * scaleX;
+  const fsN=ptToPx(gn('fs-name')); ctx.font=`${fw.name} ${fsN}px 'Poppins',sans-serif`; ctx.fillStyle=gv('fc-name'); ctx.textBaseline='top'; ctx.textAlign=align.name; ctx.fillText(card.name||'', gn('fx-name')*scaleX, gn('fy-name')*scaleY);
+  const fsS=ptToPx(gn('fs-sub')); ctx.font=`${fw.sub} ${fsS}px 'Poppins',sans-serif`; ctx.fillStyle=gv('fc-sub'); ctx.textAlign=align.sub; ctx.fillText(card.sub||'', gn('fx-sub')*scaleX, gn('fy-sub')*scaleY);
 
-  // NAME
-  const fsN=ptToPx(gn('fs-name'));
-  ctx.font=`${fw.name} ${fsN}px 'Poppins',sans-serif`;
-  ctx.fillStyle=gv('fc-name');
-  ctx.textBaseline='top';
-  ctx.textAlign=align.name; // <--- Dinamis sesuai tombol align
-  ctx.fillText(card.name||'', gn('fx-name')*scaleX, gn('fy-name')*scaleY);
-
-  // SUBTITLE
-  const fsS=ptToPx(gn('fs-sub'));
-  ctx.font=`${fw.sub} ${fsS}px 'Poppins',sans-serif`;
-  ctx.fillStyle=gv('fc-sub');
-  ctx.textAlign=align.sub; // <--- Dinamis sesuai tombol align
-  ctx.fillText(card.sub||'', gn('fx-sub')*scaleX, gn('fy-sub')*scaleY);
-
-  // ── TYPE ICONS LOGIC ──────────────────────────────────────────────────────
-  const typeSize = gn('t-s') * scaleX;
-  const typeGap = gn('t-g') * scaleX;
-  const typeStartX = gn('t-x') * scaleX; // Posisi Kiri
-  const typeY = gn('t-y') * scaleY;
-
+  const typeSize = gn('t-s') * scaleX; const typeGap = gn('t-g') * scaleX; const typeStartX = gn('t-x') * scaleX; const typeY = gn('t-y') * scaleY;
   async function drawTypeIconAt(typeStr, xPos) {
     if(!typeStr) return;
-    const key = typeStr.toLowerCase().trim();
-    const b64 = typeImgMap[key];
-    if(b64) {
-      const tImg = await loadImgFromSrc(b64);
-      if(tImg) {
-        ctx.drawImage(tImg, xPos, typeY, typeSize, typeSize);
-      }
-    }
+    const key = typeStr.toLowerCase().trim(); const b64 = typeImgMap[key];
+    if(b64) { const tImg = await loadImgFromSrc(b64); if(tImg) ctx.drawImage(tImg, xPos, typeY, typeSize, typeSize); }
   }
+  const t1 = card.type1 ? card.type1.trim() : ""; const t2 = card.type2 ? card.type2.trim() : "";
+  if (t1 && t2) { await drawTypeIconAt(t1, typeStartX); await drawTypeIconAt(t2, typeStartX + typeSize + typeGap); } 
+  else if (t1 || t2) { const singleType = t1 || t2; await drawTypeIconAt(singleType, typeStartX + typeSize + typeGap); }
 
-  const t1 = card.type1 ? card.type1.trim() : "";
-  const t2 = card.type2 ? card.type2.trim() : "";
-
-  if (t1 && t2) {
-    // Jika ada 2 type: Kiri (Type 1) dan Kanan (Type 2)
-    await drawTypeIconAt(t1, typeStartX);
-    await drawTypeIconAt(t2, typeStartX + typeSize + typeGap);
-  } else if (t1 || t2) {
-    // Jika hanya ada 1 type: Letakkan di posisi Kanan
-    const singleType = t1 || t2;
-    await drawTypeIconAt(singleType, typeStartX + typeSize + typeGap);
-  }
-
-  // POKEMON IMAGE
   if(card.src){
     const img=await loadImgFromSrc(card.src);
     if(img&&img.naturalWidth>0){
-      const areaW=gn('iw')*scaleX;
-      const areaH=gn('ih')*scaleY;
-      const imgX=gn('ix')*scaleX;
-      const imgY=gn('iy')*scaleY;
+      const areaW=gn('iw')*scaleX; const areaH=gn('ih')*scaleY; const imgX=gn('ix')*scaleX; const imgY=gn('iy')*scaleY;
       const sc2=Math.min(areaW/img.naturalWidth, areaH/img.naturalHeight);
       const dw=img.naturalWidth*sc2, dh=img.naturalHeight*sc2;
       ctx.drawImage(img, imgX+(areaW-dw)/2, imgY+(areaH-dh)/2, dw, dh);
     }
   }
 
-  // ID
-  const fsI=ptToPx(gn('fs-id'));
-  ctx.font=`${fw.id} ${fsI}px 'Poppins',sans-serif`;
-  ctx.fillStyle=gv('fc-id');
-  ctx.textBaseline='bottom';
-  ctx.textAlign=align.id; // <--- Dinamis sesuai tombol align
-  const idStr=card.id?'#'+String(card.id).padStart(4,'0'):'';
-  ctx.fillText(idStr, gn('fx-id')*scaleX, gn('fy-id')*scaleY);
-
-  // GENERATION
-  const fsG=ptToPx(gn('fs-gen'));
-  ctx.font=`${fw.gen} ${fsG}px 'Poppins',sans-serif`;
-  ctx.fillStyle=gv('fc-gen');
-  ctx.textAlign=align.gen; // <--- Dinamis sesuai tombol align
-  ctx.fillText(card.right||'', gn('fx-gen')*scaleX, gn('fy-gen')*scaleY);
-  ctx.textAlign='left';
-  ctx.textBaseline='alphabetic';
-
+  const fsI=ptToPx(gn('fs-id')); ctx.font=`${fw.id} ${fsI}px 'Poppins',sans-serif`; ctx.fillStyle=gv('fc-id'); ctx.textBaseline='bottom'; ctx.textAlign=align.id; const idStr=card.id?'#'+String(card.id).padStart(4,'0'):''; ctx.fillText(idStr, gn('fx-id')*scaleX, gn('fy-id')*scaleY);
+  const fsG=ptToPx(gn('fs-gen')); ctx.font=`${fw.gen} ${fsG}px 'Poppins',sans-serif`; ctx.fillStyle=gv('fc-gen'); ctx.textAlign=align.gen; ctx.fillText(card.right||'', gn('fx-gen')*scaleX, gn('fy-gen')*scaleY);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   return cvs;
 }
 
-// ── PREVIEW ────────────────────────────────────────────────────────────────
+// ── PREVIEW DENGAN PAGINATION ──────────────────────────────────────────────
 async function renderPreview(){
   if(!bgImg||!cards.length) return;
   const wrap=document.getElementById('prevWrap');
   wrap.innerHTML='<div style="text-align:center;padding:16px;color:var(--mut);font-size:10px;">Rendering...</div>';
 
-  const show=cards.slice(0,18);
-  const total=Math.ceil(cards.length/9);
-  const frag=document.createDocumentFragment();
+  const itemsPerPage = 18; // Menampilkan 18 kartu per halaman preview (2 lembar cetak)
+  const maxPage = Math.ceil(cards.length / itemsPerPage) - 1;
+  if(previewPage > maxPage) previewPage = maxPage < 0 ? 0 : maxPage;
+  if(previewPage < 0) previewPage = 0;
+
+  const startIdx = previewPage * itemsPerPage;
+  const show = cards.slice(startIdx, startIdx + itemsPerPage);
+  const totalPrintPages = Math.ceil(cards.length/9);
+
+  const frag = document.createDocumentFragment();
+
+  // Top Pagination UI
+  if (cards.length > itemsPerPage) {
+    const pagDiv = document.createElement('div');
+    pagDiv.className = 'pagwrap';
+    pagDiv.innerHTML = `
+      <button class="pagbtn" id="btnPrevPag" ${previewPage===0?'disabled':''}>&larr; Prev Page</button>
+      <span class="paginfo">Menampilkan kartu ${startIdx+1} - ${Math.min(startIdx+itemsPerPage, cards.length)} dari total ${cards.length} kartu</span>
+      <button class="pagbtn" id="btnNextPag" ${previewPage===maxPage?'disabled':''}>Next Page &rarr;</button>
+    `;
+    frag.appendChild(pagDiv);
+  }
 
   for(let p=0;p<Math.ceil(show.length/9);p++){
     const bl=document.createElement('div');bl.className='pblock';
     const h=document.createElement('div');h.className='phdr';
-    h.innerHTML=`<span class="ptag">PAGE ${p+1}</span><span class="pinfo">Kartu ${p*9+1}–${Math.min((p+1)*9,cards.length)} dari ${cards.length}${total>2?' ('+total+' hal total)':''}</span>`;
+    const globalPageNum = Math.floor((startIdx + p*9) / 9) + 1;
+    h.innerHTML=`<span class="ptag">PAGE ${globalPageNum}</span><span class="pinfo">Kartu ${startIdx + p*9 + 1}–${Math.min(startIdx + (p+1)*9, cards.length)} dari ${cards.length} (${totalPrintPages} hal total)</span>`;
     bl.appendChild(h);
     const g=document.createElement('div');g.className='pgrid';
     for(let s=0;s<9;s++){
@@ -893,35 +808,25 @@ async function renderPreview(){
       const cp=document.createElement('div');cp.className='cp';
       if(idx<show.length){
         const cvs=await renderCard(show[idx],372,520);
-        const img=document.createElement('img');
-        img.src=cvs.toDataURL('image/png');
-        cp.appendChild(img);
+        const img=document.createElement('img'); img.src=cvs.toDataURL('image/png'); cp.appendChild(img);
         
         const ov=document.createElement('div');ov.className='cov';
-        
-        const btnDl=document.createElement('button');
-        btnDl.title="Download PNG";
-        btnDl.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+        const btnDl=document.createElement('button'); btnDl.title="Download PNG"; btnDl.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
         btnDl.onclick=async ()=>{
-          const dpi=300; const MM=dpi/25.4;
-          const CW=Math.round(63*MM); const CH=Math.round(88*MM);
-          const dlCvs = await renderCard(show[idx], CW, CH);
-          const a = document.createElement('a');
-          a.href = dlCvs.toDataURL('image/png');
-          const safeName = (show[idx].name || show[idx].id || 'kartu').replace(/[^a-z0-9]/gi, '_');
-          a.download = safeName + '.png';
-          a.click();
+          const dpi=300; const MM=dpi/25.4; const CW=Math.round(63*MM); const CH=Math.round(88*MM);
+          const dlCvs = await renderCard(show[idx], CW, CH); const a = document.createElement('a'); a.href = dlCvs.toDataURL('image/png');
+          const safeName = (show[idx].name || show[idx].id || 'kartu').replace(/[^a-z0-9]/gi, '_'); a.download = safeName + '.png'; a.click();
         };
         
-        const btnDel=document.createElement('button');
-        btnDel.className='del';
-        btnDel.title="Hapus Kartu";
-        btnDel.innerHTML='✕';
-        const i2=idx;btnDel.onclick=()=>{cards.splice(i2,1);rebuild();};
+        const btnDel=document.createElement('button'); btnDel.className='del'; btnDel.title="Hapus Kartu"; btnDel.innerHTML='✕';
+        const globalCardIndex = startIdx + idx;
+        btnDel.onclick=()=>{
+          cards.splice(globalCardIndex, 1); 
+          exRows.splice(globalCardIndex, 1); // Hapus juga dari array asli excel agar tidak muncul lagi
+          rebuild();
+        };
         
-        ov.appendChild(btnDl);
-        ov.appendChild(btnDel);
-        cp.appendChild(ov);
+        ov.appendChild(btnDl); ov.appendChild(btnDel); cp.appendChild(ov);
       } else {
         cp.style.cssText='display:flex;align-items:center;justify-content:center;';
         cp.innerHTML='<span style="font-size:9px;color:var(--mut);">kosong</span>';
@@ -930,162 +835,105 @@ async function renderPreview(){
     }
     bl.appendChild(g);frag.appendChild(bl);
   }
+  
+  // Bottom Pagination UI
+  if (cards.length > itemsPerPage && Math.ceil(show.length/9) > 1) {
+    const pagDivB = document.createElement('div');
+    pagDivB.className = 'pagwrap';
+    pagDivB.innerHTML = `
+      <button class="pagbtn" id="btnPrevPagB" ${previewPage===0?'disabled':''}>&larr; Prev Page</button>
+      <span class="paginfo">Halaman Preview ${previewPage + 1} / ${maxPage + 1}</span>
+      <button class="pagbtn" id="btnNextPagB" ${previewPage===maxPage?'disabled':''}>Next Page &rarr;</button>
+    `;
+    frag.appendChild(pagDivB);
+  }
+
   wrap.innerHTML='';wrap.appendChild(frag);
+
+  // Bind Events untuk Pagination
+  const bindPag = (id, delta) => {
+    const el = document.getElementById(id);
+    if(el) el.onclick = () => { previewPage += delta; rd(); };
+  };
+  bindPag('btnPrevPag', -1); bindPag('btnNextPag', 1);
+  bindPag('btnPrevPagB', -1); bindPag('btnNextPagB', 1);
 }
 
-// ── GENERATE PDF (BUG FIX: USING JPEG FOR PDF XOBJECT) ──────────────────────
+// ── GENERATE PDF ────────────────────────────────────────────────────────────
 async function genPDF(){
   if(!bgImg||!cards.length) return;
   const dpi={web:150,print:300,max:300}[qual];
-  const MM=dpi/25.4;
-  const PW=Math.round(210*MM),PH=Math.round(297*MM);
-  const CW=Math.round(63*MM),CH=Math.round(88*MM);
-  const GAP=Math.round(2*MM);
-  const MX=Math.round((PW-3*CW-2*GAP)/2);
-  const MY=Math.round((PH-3*CH-2*GAP)/2);
+  const MM=dpi/25.4; const PW=Math.round(210*MM),PH=Math.round(297*MM);
+  const CW=Math.round(63*MM),CH=Math.round(88*MM); const GAP=Math.round(2*MM);
+  const MX=Math.round((PW-3*CW-2*GAP)/2); const MY=Math.round((PH-3*CH-2*GAP)/2);
 
-  const btn=document.getElementById('btnGen');
-  const pw=document.getElementById('pw'),pf=document.getElementById('pf'),pl=document.getElementById('pl');
-  btn.disabled=true; document.getElementById('btnZip').disabled=true;
-  document.getElementById('plw').classList.remove('show');
-  pw.classList.add('show');
+  const btn=document.getElementById('btnGen'); const pw=document.getElementById('pw'),pf=document.getElementById('pf'),pl=document.getElementById('pl');
+  btn.disabled=true; document.getElementById('btnZip').disabled=true; document.getElementById('plw').classList.remove('show'); pw.classList.add('show');
 
-  const tp=Math.ceil(cards.length/9);
-  const pd=[];
+  const tp=Math.ceil(cards.length/9); const pd=[];
 
   for(let p=0;p<tp;p++){
-    pl.textContent=`Rendering hal ${p+1}/${tp} (${dpi}dpi)...`;
-    pf.style.width=Math.round(p/tp*85)+'%';
-    await new Promise(r=>setTimeout(r,10));
-
-    const cvs=document.createElement('canvas');
-    cvs.width=PW;cvs.height=PH;
-    const ctx=cvs.getContext('2d');
-    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-    // Wajib warna solid agar JPEG tidak menjadi hitam
-    ctx.fillStyle='#ffffff';ctx.fillRect(0,0,PW,PH);
-
+    pl.textContent=`Rendering hal ${p+1}/${tp} (${dpi}dpi)...`; pf.style.width=Math.round(p/tp*85)+'%'; await new Promise(r=>setTimeout(r,10));
+    const cvs=document.createElement('canvas'); cvs.width=PW;cvs.height=PH; const ctx=cvs.getContext('2d');
+    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high'; ctx.fillStyle='#ffffff';ctx.fillRect(0,0,PW,PH);
     for(let s=0;s<9;s++){
-      const idx=p*9+s;
-      if(idx>=cards.length) continue;
-      const col=s%3,row=Math.floor(s/3);
-      const x=MX+col*(CW+GAP),y=MY+row*(CH+GAP);
-      const cc=await renderCard(cards[idx],CW,CH);
-      ctx.drawImage(cc,x,y);
+      const idx=p*9+s; if(idx>=cards.length) continue;
+      const col=s%3,row=Math.floor(s/3); const x=MX+col*(CW+GAP),y=MY+row*(CH+GAP);
+      const cc=await renderCard(cards[idx],CW,CH); ctx.drawImage(cc,x,y);
     }
-
-    // [FIX]: Convert to JPEG instead of PNG for raw PDF embedding
-    const du=cvs.toDataURL('image/jpeg', 0.95);
-    const bin=atob(du.split(',')[1]);
-    const bytes=new Uint8Array(bin.length);
+    const du=cvs.toDataURL('image/jpeg', 0.95); const bin=atob(du.split(',')[1]); const bytes=new Uint8Array(bin.length);
     for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
-    pd.push({bytes,isJ:false,w:PW,h:PH});
-    await new Promise(r=>setTimeout(r,10));
+    pd.push({bytes,isJ:false,w:PW,h:PH}); await new Promise(r=>setTimeout(r,10));
   }
 
-  pl.textContent='Membangun PDF...';pf.style.width='93%';
-  await new Promise(r=>setTimeout(r,20));
+  pl.textContent='Membangun PDF...';pf.style.width='93%'; await new Promise(r=>setTimeout(r,20));
+  const pdfB=buildPDF(pd); const blob=new Blob([pdfB],{type:'application/pdf'}); const url=URL.createObjectURL(blob);
+  pf.style.width='100%';pl.textContent='Selesai!'; await new Promise(r=>setTimeout(r,300)); pw.classList.remove('show');
 
-  const pdfB=buildPDF(pd);
-  const blob=new Blob([pdfB],{type:'application/pdf'});
-  const url=URL.createObjectURL(blob);
-
-  pf.style.width='100%';pl.textContent='Selesai!';
-  await new Promise(r=>setTimeout(r,300));
-  pw.classList.remove('show');
-
-  const mb=(pdfB.length/1048576).toFixed(1);
-  document.getElementById('pdfTit').textContent=`PDF siap — ${tp} hal · ${cards.length} kartu · ${mb} MB`;
-  
-  const linkPdf=document.getElementById('pdfA');
-  linkPdf.href=url;
-  linkPdf.download="Pokedex_Print.pdf";
-  linkPdf.textContent="Download PDF →";
-  
-  document.getElementById('plw').classList.add('show');
-  btn.disabled=false; document.getElementById('btnZip').disabled=false;
+  const mb=(pdfB.length/1048576).toFixed(1); document.getElementById('pdfTit').textContent=`PDF siap — ${tp} hal · ${cards.length} kartu · ${mb} MB`;
+  const linkPdf=document.getElementById('pdfA'); linkPdf.href=url; linkPdf.download="Pokedex_Print.pdf"; linkPdf.textContent="Download PDF →";
+  document.getElementById('plw').classList.add('show'); btn.disabled=false; document.getElementById('btnZip').disabled=false;
 }
 
 // ── GENERATE ZIP PNGS ──────────────────────────────────────────────────────
 async function genZIP(){
   if(!bgImg||!cards.length) return;
-  const btn=document.getElementById('btnZip');
-  const pw=document.getElementById('pw'),pf=document.getElementById('pf'),pl=document.getElementById('pl');
-  btn.disabled=true; document.getElementById('btnGen').disabled=true;
-  document.getElementById('plw').classList.remove('show');
-  pw.classList.add('show');
+  const btn=document.getElementById('btnZip'); const pw=document.getElementById('pw'),pf=document.getElementById('pf'),pl=document.getElementById('pl');
+  btn.disabled=true; document.getElementById('btnGen').disabled=true; document.getElementById('plw').classList.remove('show'); pw.classList.add('show');
 
-  const zip = new JSZip();
-  const dpi = 300;
-  const MM = dpi/25.4;
-  const CW = Math.round(63*MM);
-  const CH = Math.round(88*MM);
-
+  const zip = new JSZip(); const dpi = 300; const MM = dpi/25.4; const CW = Math.round(63*MM); const CH = Math.round(88*MM);
   for(let i=0; i<cards.length; i++){
-    pl.textContent=`Memproses PNG ${i+1}/${cards.length}...`;
-    pf.style.width=Math.round((i/cards.length)*90)+'%';
-    await new Promise(r=>setTimeout(r,10));
-
-    const cvs = await renderCard(cards[i], CW, CH);
-    const data = cvs.toDataURL('image/png').split(',')[1];
-    const safeName = (cards[i].id || i+1) + "_" + (cards[i].name || "kartu").replace(/[^a-z0-9]/gi, '_');
-    zip.file(safeName + ".png", data, {base64: true});
+    pl.textContent=`Memproses PNG ${i+1}/${cards.length}...`; pf.style.width=Math.round((i/cards.length)*90)+'%'; await new Promise(r=>setTimeout(r,10));
+    const cvs = await renderCard(cards[i], CW, CH); const data = cvs.toDataURL('image/png').split(',')[1];
+    const safeName = (cards[i].id || i+1) + "_" + (cards[i].name || "kartu").replace(/[^a-z0-9]/gi, '_'); zip.file(safeName + ".png", data, {base64: true});
   }
-
-  pl.textContent='Membangun file ZIP...';
-  pf.style.width='95%';
-  await new Promise(r=>setTimeout(r,20));
-
-  const content = await zip.generateAsync({type:"blob"});
-  const url = URL.createObjectURL(content);
-
-  pf.style.width='100%';pl.textContent='ZIP Selesai!';
-  await new Promise(r=>setTimeout(r,300));
-  pw.classList.remove('show');
-
-  const mb=(content.size/1048576).toFixed(1);
-  document.getElementById('pdfTit').textContent=`ZIP siap — ${cards.length} kartu · ${mb} MB`;
+  pl.textContent='Membangun file ZIP...'; pf.style.width='95%'; await new Promise(r=>setTimeout(r,20));
+  const content = await zip.generateAsync({type:"blob"}); const url = URL.createObjectURL(content);
+  pf.style.width='100%';pl.textContent='ZIP Selesai!'; await new Promise(r=>setTimeout(r,300)); pw.classList.remove('show');
   
-  const linkPdf=document.getElementById('pdfA');
-  linkPdf.href=url;
-  linkPdf.download="Pokedex_Cards_PNG.zip";
-  linkPdf.textContent="Download ZIP →";
-  
-  document.getElementById('plw').classList.add('show');
-  btn.disabled=false; document.getElementById('btnGen').disabled=false;
+  const mb=(content.size/1048576).toFixed(1); document.getElementById('pdfTit').textContent=`ZIP siap — ${cards.length} kartu · ${mb} MB`;
+  const linkPdf=document.getElementById('pdfA'); linkPdf.href=url; linkPdf.download="Pokedex_Cards_PNG.zip"; linkPdf.textContent="Download ZIP →";
+  document.getElementById('plw').classList.add('show'); btn.disabled=false; document.getElementById('btnGen').disabled=false;
 }
 
-// ── PDF BUILDER (Internal Simple PDF Generator) ─────────────────────────────
+// ── PDF BUILDER ────────────────────────────────────────────────────────────
 function buildPDF(pages){
-  const PW=595.28,PH=841.89;
-  const enc=new TextEncoder();
-  const pts=[],off={};let pos=0;
-  function w(s){const b=enc.encode(s);pts.push(b);pos+=b.length;}
-  function wb(b){pts.push(b);pos+=b.length;}
-  w('%PDF-1.4\n%\xFF\xFF\xFF\xFF\n');
-  const n=pages.length;
-  off[1]=pos;w('1 0 obj\n<</Type/Catalog/Pages 2 0 R>>\nendobj\n');
-  const kids=Array.from({length:n},(_,i)=>`${3+i*3} 0 R`).join(' ');
-  off[2]=pos;w(`2 0 obj\n<</Type/Pages/Kids [${kids}]/Count ${n}>>\nendobj\n`);
+  const PW=595.28,PH=841.89; const enc=new TextEncoder(); const pts=[],off={};let pos=0;
+  function w(s){const b=enc.encode(s);pts.push(b);pos+=b.length;} function wb(b){pts.push(b);pos+=b.length;}
+  w('%PDF-1.4\n%\xFF\xFF\xFF\xFF\n'); const n=pages.length; off[1]=pos;w('1 0 obj\n<</Type/Catalog/Pages 2 0 R>>\nendobj\n');
+  const kids=Array.from({length:n},(_,i)=>`${3+i*3} 0 R`).join(' '); off[2]=pos;w(`2 0 obj\n<</Type/Pages/Kids [${kids}]/Count ${n}>>\nendobj\n`);
   for(let i=0;i<n;i++){
-    const pid=3+i*3,iid=4+i*3,cid=5+i*3;
-    const{bytes,isJ,w:cw,h:ch}=pages[i];
-    off[iid]=pos;
-    // [FIX]: Change Filter from /FlateDecode to /DCTDecode for JPEG support
+    const pid=3+i*3,iid=4+i*3,cid=5+i*3; const{bytes,isJ,w:cw,h:ch}=pages[i]; off[iid]=pos;
     w(`${iid} 0 obj\n<</Type/XObject/Subtype/Image/Width ${cw}/Height ${ch}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter /DCTDecode/Length ${bytes.length}>>\nstream\n`);
-    wb(bytes);w('\nendstream\nendobj\n');
-    const cont=enc.encode(`q ${PW} 0 0 ${PH} 0 0 cm /Im${i} Do Q`);
+    wb(bytes);w('\nendstream\nendobj\n'); const cont=enc.encode(`q ${PW} 0 0 ${PH} 0 0 cm /Im${i} Do Q`);
     off[cid]=pos;w(`${cid} 0 obj\n<</Length ${cont.length}>>\nstream\n`);wb(cont);w('\nendstream\nendobj\n');
     off[pid]=pos;w(`${pid} 0 obj\n<</Type/Page/Parent 2 0 R/MediaBox [0 0 ${PW} ${PH}]/Contents ${cid} 0 R/Resources<</XObject<</Im${i} ${iid} 0 R>>>>>>\nendobj\n`);
   }
-  const xp=pos,mx=2+n*3;
-  w(`xref\n0 ${mx+1}\n`);w('0000000000 65535 f \n');
+  const xp=pos,mx=2+n*3; w(`xref\n0 ${mx+1}\n`);w('0000000000 65535 f \n');
   for(let id=1;id<=mx;id++){const o=off[id];w(o!==undefined?String(o).padStart(10,'0')+' 00000 n \n':'0000000000 65535 f \n');}
   w(`trailer\n<</Size ${mx+1}/Root 1 0 R>>\nstartxref\n${xp}\n%%EOF\n`);
-  let tot=0;for(const p of pts)tot+=p.length;
-  const out=new Uint8Array(tot);let o=0;
-  for(const p of pts){out.set(p,o);o+=p.length;}
-  return out;
+  let tot=0;for(const p of pts)tot+=p.length; const out=new Uint8Array(tot);let o=0;
+  for(const p of pts){out.set(p,o);o+=p.length;} return out;
 }
 </script>
 </body>
